@@ -308,6 +308,7 @@ class CodeWriter:
     Args:
         label (str): the label to write.
     """
+    # check
     # This is irrelevant for project 7,
     # you will implement this in project 8!
     pass
