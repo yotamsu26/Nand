@@ -159,6 +159,30 @@ class CodeWriter:
       "@{0}\n" \
       "D;JGT\n" \
       "D;JLT\n"
+  
+  RET_AND_LCL_ADDRESS_ASM = "// return\n" \
+      "@LCL\n" \
+      "D=M\n" \
+      "@endFrame\n" \
+      "M=D\n" \
+      "@5\n" \
+      "D=D-A\n" \
+      "@retAddr\n" \
+      "M=D\n"
+  
+  END_FRAME_ASM = "@endFrame\n" \
+      "M=D\n" \
+      "@{0}\n" \
+      "D=D-A\n" \
+      "@{1}\n" \
+      "M=D\n"
+      
+  SP_TO_ARG_PLUS_1_ASM = "@ARG\n" \
+      "A=M\n" \
+      "M=D\n" \
+      "D=D+1\n" \
+      "@SP\n" \
+      "M=D\n"
 
   def __init__(self, output_file: typing.TextIO) -> None:
     """Initializes the CodeWriter.
@@ -400,16 +424,13 @@ class CodeWriter:
 
   def write_return(self) -> None:
     """Writes assembly code that affects the return command."""
-    # This is irrelevant for project 7,
-    # you will implement this in project 8!
-    # The pseudo-code of "return" is:
-    # frame = LCL                   // frame is a temporary variable
-    # return_address = *(frame-5)   // puts the return address in a temp var
-    # *ARG = pop()                  // repositions the return value for the caller
-    # SP = ARG + 1                  // repositions SP for the caller
-    # THAT = *(frame-1)             // restores THAT for the caller
-    # THIS = *(frame-2)             // restores THIS for the caller
-    # ARG = *(frame-3)              // restores ARG for the caller
-    # LCL = *(frame-4)              // restores LCL for the caller
-    # goto return_address           // go to the return address
-    pass
+    assembly_ret_and_lcl_address = CodeWriter.RET_AND_LCL_ADDRESS_ASM.format()
+    self.write_pop("argument", 0)
+    assembly_sp_to_arg_plus_1 = CodeWriter.SP_TO_ARG_PLUS_1_ASM.format()
+    assembly_that_restore = CodeWriter.END_FRAME_ASM.format("THAT", 1)
+    assembly_this_restore = CodeWriter.END_FRAME_ASM.format("THIS", 2)
+    assembly_arg_restore = CodeWriter.END_FRAME_ASM.format("ARG", 3)
+    assembly_lcl_restore = CodeWriter.END_FRAME_ASM.format("LCL", 4)
+    self.write_goto("retAddr")
+
+    
