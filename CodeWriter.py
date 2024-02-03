@@ -145,6 +145,9 @@ class CodeWriter:
       "A=M-1\n" \
       "M={1}M\n"
 
+  FUNCTION_LABEL = "// write function {1}\n" \
+      "({2}.{1}"
+
   def __init__(self, output_file: typing.TextIO) -> None:
     """Initializes the CodeWriter.
 
@@ -155,6 +158,8 @@ class CodeWriter:
     self.segment_dic = {"local": "LCL", "argument": "ARG", "this": "THIS",
                   "that": "THAT", "temp": 5, "pointer": 3, "static": 16}
     self.comp_op = 0
+    # in order to write function label (e.g. foo$bar), this var store the current method
+    self._cur_method = ""
     self.command_functions = {
     "add": lambda: self.write_bit_op("add", "+"),
     "sub": lambda: self.write_bit_op("sub", "-"),
@@ -178,6 +183,7 @@ class CodeWriter:
         filename (str): The name of the VM file.
     """
     os.rename(self.output_file.name, filename) # TODO : check if possible without os
+
 
   def write_arithmetic(self, command: str) -> None:
     """Writes assembly code that is the translation of the given 
@@ -351,7 +357,11 @@ class CodeWriter:
     # (function_name)       // injects a function entry label into the code
     # repeat n_vars times:  // n_vars = number of local variables
     #   push constant 0     // initializes the local variables to 0
-    pass
+    self.output_file.write(CodeWriter.FUNCTION_LABEL.format(function_name, self.output_file.name))
+    for i in range(n_vars):
+        self.write_push_pop(command="push", segment="constant", index=0)
+
+
 
   def write_call(self, function_name: str, n_args: int) -> None:
     """Writes assembly code that affects the call command. 
