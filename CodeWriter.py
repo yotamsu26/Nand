@@ -187,6 +187,52 @@ class CodeWriter:
   FUNCTION_LABEL = "// write function {1}\n" \
       "({2}.{1}"
 
+  #USAGE: 1 -> return label
+  PUSH_RETURN_LABEL = "// push return label\n" \ 
+      "{1}\n" \
+      "D=A\n" \
+      "@SP\n" \
+      "A=M\n" \
+      "M=D\n" \
+      "@SP\n" \
+      "M=M+1\n"
+
+  ##USAGE: 1 -> name of the field (LCL, THIS ..)
+  PUSH_ENV_FIELD = "// push {1}\n" \
+      "@{1}\n" \
+      "D=M\n" \
+      "@SP\n" \
+      "A=M\n" \
+      "M=D\n" \
+      "@SP\n" \
+      "M=M+1\n"
+
+  #USAGE: 1 -> number of arguments callee except to get
+  SET_NEW_ARG = "// ARG = SP-5-n_args\n" \
+      "@SP\n" \
+      "D=A\n" \
+      "@5\n" \
+      "D=D-A\n" \
+      "@{1}\n" \
+      "D=D-A\n" \
+      "@ARG\n" \
+      "M=D\n"
+
+  SET_LCL_EQ_SP = "// set LCL to be equal to SP\n" \
+      "@SP\n" \
+      "D=M\n" \
+      "@LCL\n" \
+      "M=D\n"
+
+  #USAGE: 1 -> file name, 2 -> function name
+  JUMP_TO_FUNC = "// jump to func\n" \
+      "@{1}.{2}\n" \
+      "0;JMP\n"
+
+  #USAGE: 1 -> caller name, 2 -> filename, 3 -> label counter
+  GENERATE_RETURN_LABEL = "// insert return point\n" \
+      "({2}.{1}$ret.{3})\n"
+
   def __init__(self, output_file: typing.TextIO) -> None:
     """Initializes the CodeWriter.
 
@@ -422,15 +468,26 @@ class CodeWriter:
     # you will implement this in project 8!
     # The pseudo-code of "call function_name n_args" is:
     # push return_address   // generates a label and pushes it to the stack
+    return_address = CodeWriter.GENERATE_RETURN_LABEL.format(self._cur_method, self.file_name, self.comp_op)
+    self.output_file.write(CodeWriter.PUSH_RETURN_LABEL.format(return_address))
     # push LCL              // saves LCL of the caller
+    self.output_file.write(CodeWriter.PUSH_ENV_FIELD.format("LCL"))
     # push ARG              // saves ARG of the caller
+    self.output_file.write(CodeWriter.PUSH_ENV_FIELD.format("ARG"))
     # push THIS             // saves THIS of the caller
+    self.output_file.write(CodeWriter.PUSH_ENV_FIELD.format("THIS"))
     # push THAT             // saves THAT of the caller
+    self.output_file.write(CodeWriter.PUSH_ENV_FIELD.format("THAT"))
     # ARG = SP-5-n_args     // repositions ARG
+    self.output_file.write(CodeWriter.SET_NEW_ARG.format(f"{n_args}"))
     # LCL = SP              // repositions LCL
+    self.output_file.write(CodeWriter.SET_LCL_EQ_SP)
     # goto function_name    // transfers control to the callee
+    self.output_file.write(CodeWriter.JUMP_TO_FUNC.format(function_name, self.file_name))
     # (return_address)      // injects the return address label into the code
-    pass
+    self.output_file.write(return_address)
+    self.comp_op += 1
+    #TODO consider join all the assembly code and then write it to the output file
 
   def write_return(self) -> None:
     """Writes assembly code that affects the return command."""
