@@ -372,7 +372,7 @@ class CodeWriter:
     # (function_name)       // injects a function entry label into the code
     # repeat n_vars times:  // n_vars = number of local variables
     #   push constant 0     // initializes the local variables to 0
-    self.output_file.write(CodeWriter.FUNCTION_LABEL.format(function_name, self.output_file.name))
+    self.output_file.write(CodeWriter.FUNCTION_LABEL.format(function_name, self.file_name))
     for i in range(n_vars):
         self.write_push_pop(command="push", segment="constant", index=0)
 
