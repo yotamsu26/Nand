@@ -6,7 +6,6 @@ as allowed by the Creative Common Attribution-NonCommercial-ShareAlike 3.0
 Unported [License](https://creativecommons.org/licenses/by-nc-sa/3.0/).
 """
 import typing
-import os
       
 class CodeWriter:
   """Translates VM commands into Hack assembly code."""
@@ -168,6 +167,7 @@ class CodeWriter:
           output_stream (typing.TextIO): output stream.
     """
     self.output_file = output_file
+    self.file_name = ""
     self.segment_dic = {"local": "LCL", "argument": "ARG", "this": "THIS",
                   "that": "THAT", "temp": 5, "pointer": 3, "static": 16}
     self.comp_op = 0
@@ -193,7 +193,7 @@ class CodeWriter:
     Args:
         filename (str): The name of the VM file.
     """
-    os.rename(self.output_file.name, filename) # TODO : check if possible without os
+    self.file_name = filename
 
   def write_arithmetic(self, command: str) -> None:
     """Writes assembly code that is the translation of the given 
