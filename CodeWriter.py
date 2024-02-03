@@ -6,7 +6,6 @@ as allowed by the Creative Common Attribution-NonCommercial-ShareAlike 3.0
 Unported [License](https://creativecommons.org/licenses/by-nc-sa/3.0/).
 """
 import typing
-import os
       
 class CodeWriter:
   """Translates VM commands into Hack assembly code."""
@@ -144,6 +143,22 @@ class CodeWriter:
       "@SP\n" \
       "A=M-1\n" \
       "M={1}M\n"
+  
+  LABEL_ASM = " // label {0}\n" \
+      "({0})\n"
+  
+  GOTO_ASM = "// goto {0}\n" \
+      "@{0}\n" \
+      "0;JMP\n"
+  
+  IF_GOTO_ASM = "// if-goto {0}\n" \
+      "@SP\n" \
+      "M=M-1\n" \
+      "A=M\n" \
+      "D=M\n" \
+      "@{0}\n" \
+      "D;JGT\n" \
+      "D;JLT\n"
 
   FUNCTION_LABEL = "// write function {1}\n" \
       "({2}.{1}"
@@ -155,6 +170,7 @@ class CodeWriter:
           output_stream (typing.TextIO): output stream.
     """
     self.output_file = output_file
+    self.file_name = ""
     self.segment_dic = {"local": "LCL", "argument": "ARG", "this": "THIS",
                   "that": "THAT", "temp": 5, "pointer": 3, "static": 16}
     self.comp_op = 0
@@ -182,7 +198,7 @@ class CodeWriter:
     Args:
         filename (str): The name of the VM file.
     """
-    os.rename(self.output_file.name, filename) # TODO : check if possible without os
+    self.file_name = filename
 
 
   def write_arithmetic(self, command: str) -> None:
@@ -254,7 +270,6 @@ class CodeWriter:
 
     self.output_file.write(assembly_pointer_static_push)
 
-  #TODO : check the index type
     
   def pointer_static_pop(self, segment: str, index: int) -> None:
     '''Writes the assembly code that is the translation of the given command,
@@ -314,10 +329,10 @@ class CodeWriter:
     Args:
         label (str): the label to write.
     """
-    # check
-    # This is irrelevant for project 7,
-    # you will implement this in project 8!
-    pass
+    assembly_label = CodeWriter.LABEL_ASM.format(label)
+    # TODO : add self.current_function_name
+
+    self.output_file.write(assembly_label)
 
   def write_goto(self, label: str) -> None:
     """Writes assembly code that affects the goto command.
@@ -325,9 +340,9 @@ class CodeWriter:
     Args:
         label (str): the label to go to.
     """
-    # This is irrelevant for project 7,
-    # you will implement this in project 8!
-    pass
+    assembly_goto = CodeWriter.GOTO_ASM.format(label)
+
+    self.output_file.write(assembly_goto)
 
   def write_if(self, label: str) -> None:
     """Writes assembly code that affects the if-goto command. 
@@ -335,9 +350,9 @@ class CodeWriter:
     Args:
         label (str): the label to go to.
     """
-    # This is irrelevant for project 7,
-    # you will implement this in project 8!
-    pass
+    assembly_if = CodeWriter.IF_GOTO_ASM.format(label)
+
+    self.output_file.write(assembly_if)
 
   def write_function(self, function_name: str, n_vars: int) -> None:
     """Writes assembly code that affects the function command. 

@@ -30,6 +30,11 @@ def translate_file(
     """
     parser = Parser(input_file)
     code_writer = CodeWriter(output_file)
+
+    input_filename, input_extension = os.path.splitext(
+        os.path.basename(input_file.name))
+    code_writer.set_file_name(input_filename)
+
     while parser.has_more_commands():
         parser.advance()
         command_type = parser.command_type()
