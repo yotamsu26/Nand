@@ -32,10 +32,24 @@ def translate_file(
     code_writer = CodeWriter(output_file)
     while parser.has_more_commands():
         parser.advance()
-        if parser.command_type() == C_ARITHMETIC:
+        command_type = parser.command_type()
+        if command_type == C_ARITHMETIC:
             code_writer.write_arithmetic(parser.arg1())
-        elif parser.command_type() == C_PUSH or parser.command_type() == C_POP:
+        elif command_type == C_PUSH or command_type == C_POP:
             code_writer.write_push_pop(parser.command_type(), parser.arg1(), parser.arg2())
+        elif command_type == "C_LABEL":
+            code_writer.write_label(parser.arg1())
+        elif command_type == "C_GOTO":
+            code_writer.write_goto(parser.arg1())
+        elif command_type == "C_IF":
+            code_writer.write_if(parser.arg1())
+        elif command_type == "C_FUNCTION":
+            code_writer.write_function(parser.arg1(), parser.arg2())
+        elif command_type == "C_CALL":
+            code_writer.write_call(parser.arg1(), parser.arg2())
+        elif command_type == "C_RETURN":
+            code_writer.write_return()
+
 if "__main__" == __name__:
     # Parses the input path and calls translate_file on each input file.
     # This opens both the input and the output files!

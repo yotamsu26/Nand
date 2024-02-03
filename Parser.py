@@ -49,14 +49,11 @@ class Parser:
   #### Constants ####
 
   # types
-  POP = "pop"
-  PUSH = "push"
   ARITMETIC_COMMAND_LIST = ['add', 'sub', 'neg', 'eq', 'gt', 'lt', 'and', 'or', 'not', 'shiftleft', 'shiftright']
+  command_types = {"pop": "C_POP", "push": "C_PUSH", "label": "C_LABEL", "goto": "C_GOTO", "if-goto": "C_IF", "function": "C_FUNCTION", "return": "C_RETURN", "call": "C_CALL"}
 
   # command types
   C_ARITHMETIC = "C_ARITHMETIC"
-  C_PUSH = "C_PUSH"
-  C_POP = "C_POP"
 
   def __init__(self, input_file: typing.TextIO) -> None:
     """Gets ready to parse the input file.
@@ -114,10 +111,7 @@ class Parser:
     command = self.current_command.split(' ')[0]
     if command in Parser.ARITMETIC_COMMAND_LIST:
       return Parser.C_ARITHMETIC
-    elif command == Parser.POP:
-      return Parser.C_POP
-    elif command == Parser.PUSH:
-      return Parser.C_PUSH
+    return Parser.command_types[command]
 
   def arg1(self) -> str:
     """
