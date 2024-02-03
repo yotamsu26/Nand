@@ -144,6 +144,22 @@ class CodeWriter:
       "@SP\n" \
       "A=M-1\n" \
       "M={1}M\n"
+  
+  LABEL_ASM = " // label {0}\n" \
+      "({0})\n"
+  
+  GOTO_ASM = "// goto {0}\n" \
+      "@{0}\n" \
+      "0;JMP\n"
+  
+  IF_GOTO_ASM = "// if-goto {0}\n" \
+      "@SP\n" \
+      "M=M-1\n" \
+      "A=M\n" \
+      "D=M\n" \
+      "@{0}\n" \
+      "D;JGT\n" \
+      "D;JLT\n"
 
   def __init__(self, output_file: typing.TextIO) -> None:
     """Initializes the CodeWriter.
@@ -248,7 +264,6 @@ class CodeWriter:
 
     self.output_file.write(assembly_pointer_static_push)
 
-  #TODO : check the index type
     
   def pointer_static_pop(self, segment: str, index: int) -> None:
     '''Writes the assembly code that is the translation of the given command,
@@ -308,10 +323,10 @@ class CodeWriter:
     Args:
         label (str): the label to write.
     """
-    # check
-    # This is irrelevant for project 7,
-    # you will implement this in project 8!
-    pass
+    assembly_label = CodeWriter.LABEL_ASM.format(label)
+    # TODO : add self.current_function_name
+
+    self.output_file.write(assembly_label)
 
   def write_goto(self, label: str) -> None:
     """Writes assembly code that affects the goto command.
@@ -319,9 +334,9 @@ class CodeWriter:
     Args:
         label (str): the label to go to.
     """
-    # This is irrelevant for project 7,
-    # you will implement this in project 8!
-    pass
+    assembly_goto = CodeWriter.GOTO_ASM.format(label)
+
+    self.output_file.write(assembly_goto)
 
   def write_if(self, label: str) -> None:
     """Writes assembly code that affects the if-goto command. 
@@ -329,9 +344,9 @@ class CodeWriter:
     Args:
         label (str): the label to go to.
     """
-    # This is irrelevant for project 7,
-    # you will implement this in project 8!
-    pass
+    assembly_if = CodeWriter.IF_GOTO_ASM.format(label)
+
+    self.output_file.write(assembly_if)
 
   def write_function(self, function_name: str, n_vars: int) -> None:
     """Writes assembly code that affects the function command. 
