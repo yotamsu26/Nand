@@ -33,7 +33,7 @@ def translate_file(
 
     input_filename, input_extension = os.path.splitext(
         os.path.basename(input_file.name))
-    code_writer.set_filename(input_filename)
+    code_writer.set_file_name(input_filename)
 
     while parser.has_more_commands():
         parser.advance()
