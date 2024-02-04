@@ -144,8 +144,8 @@ class CodeWriter:
       "A=M-1\n" \
       "M={1}M\n"
   
-  LABEL_ASM = " // label {0}\n" \
-      "({0})\n"
+  LABEL_ASM = " // label {1}\n" \
+      "({0}${1})\n"
   
   GOTO_ASM = "// goto {0}\n" \
       "@{0}\n" \
@@ -188,8 +188,8 @@ class CodeWriter:
       "({2}.{1}"
 
   #USAGE: 1 -> return label
-  PUSH_RETURN_LABEL = "// push return label\n" \ 
-      "{1}\n" \
+  PUSH_RETURN_LABEL = "// push return label\n" \
+    "{1}\n" \
       "D=A\n" \
       "@SP\n" \
       "A=M\n" \
@@ -240,7 +240,7 @@ class CodeWriter:
           output_stream (typing.TextIO): output stream.
     """
     self.output_file = output_file
-    self.file_name = ""
+    self.file_name, self.current_function = "", ""
     self.segment_dic = {"local": "LCL", "argument": "ARG", "this": "THIS",
                   "that": "THAT", "temp": 5, "pointer": 3, "static": 16}
     self.comp_op = 0
@@ -399,7 +399,7 @@ class CodeWriter:
     Args:
         label (str): the label to write.
     """
-    assembly_label = CodeWriter.LABEL_ASM.format(label)
+    assembly_label = CodeWriter.LABEL_ASM.format(self.current_function, label)
     # TODO : add self.current_function_name
 
     self.output_file.write(assembly_label)
@@ -442,6 +442,7 @@ class CodeWriter:
     # (function_name)       // injects a function entry label into the code
     # repeat n_vars times:  // n_vars = number of local variables
     #   push constant 0     // initializes the local variables to 0
+    self.current_function = function_name
     self.output_file.write(CodeWriter.FUNCTION_LABEL.format(function_name, self.file_name))
     for i in range(n_vars):
         self.write_push_pop(command="push", segment="constant", index=0)
@@ -491,13 +492,13 @@ class CodeWriter:
 
   def write_return(self) -> None:
     """Writes assembly code that affects the return command."""
-    assembly_ret_and_lcl_address = CodeWriter.RET_AND_LCL_ADDRESS_ASM.format()
+    self.output_file.write(CodeWriter.RET_AND_LCL_ADDRESS_ASM.format())
     self.write_pop("argument", 0)
-    assembly_sp_to_arg_plus_1 = CodeWriter.SP_TO_ARG_PLUS_1_ASM.format()
-    assembly_that_restore = CodeWriter.END_FRAME_ASM.format("THAT", 1)
-    assembly_this_restore = CodeWriter.END_FRAME_ASM.format("THIS", 2)
-    assembly_arg_restore = CodeWriter.END_FRAME_ASM.format("ARG", 3)
-    assembly_lcl_restore = CodeWriter.END_FRAME_ASM.format("LCL", 4)
+    self.output_file.write(CodeWriter.SP_TO_ARG_PLUS_1_ASM.format())
+    self.output_file.write(CodeWriter.END_FRAME_ASM.format("THAT", 1))
+    self.output_file.write(CodeWriter.END_FRAME_ASM.format("THIS", 2))
+    self.output_file.write(CodeWriter.END_FRAME_ASM.format("ARG", 3))
+    self.output_file.write(CodeWriter.END_FRAME_ASM.format("LCL", 4))
     self.write_goto("retAddr")
 
     
