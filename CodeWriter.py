@@ -173,10 +173,13 @@ class CodeWriter:
       "@retAddr\n" \
       "M=D\n"
   
-  END_FRAME_ASM = "@endFrame\n" \
-      "M=D\n" \
+  END_FRAME_ASM = "// endFrame {1}\n" \
+  "@endFrame\n" \
+      "D=M\n" \
       "@{0}\n" \
       "D=D-A\n" \
+      "A=D\n" \
+      "D=M\n" \
       "@{1}\n" \
       "M=D\n"
       
@@ -189,6 +192,14 @@ class CodeWriter:
 
   FUNCTION_LABEL = "// write function {0}\n" \
       "({1}.{0})\n"
+  
+  RETURN_ASM = "// return\n" \
+      "@retAddr\n" \
+      "D=M\n" \
+      "@SP\n" \
+      "M=D\n" \
+      "A=D\n" \
+      "0;JMP\n"
 
   #USAGE: 1 -> return label
   PUSH_RETURN_LABEL = "// push return label\n" \
@@ -498,10 +509,11 @@ class CodeWriter:
     self.output_file.write(CodeWriter.RET_AND_LCL_ADDRESS_ASM.format())
     self.write_pop("argument", 0)
     self.output_file.write(CodeWriter.SP_TO_ARG_PLUS_1_ASM.format())
-    self.output_file.write(CodeWriter.END_FRAME_ASM.format("THAT", 1))
-    self.output_file.write(CodeWriter.END_FRAME_ASM.format("THIS", 2))
-    self.output_file.write(CodeWriter.END_FRAME_ASM.format("ARG", 3))
-    self.output_file.write(CodeWriter.END_FRAME_ASM.format("LCL", 4))
-    self.write_goto("retAddr")
+    self.output_file.write(CodeWriter.END_FRAME_ASM.format(1, "THAT"))
+    self.output_file.write(CodeWriter.END_FRAME_ASM.format(2, "THIS"))
+    self.output_file.write(CodeWriter.END_FRAME_ASM.format(3, "ARG"))
+    self.output_file.write(CodeWriter.END_FRAME_ASM.format(4, "LCL"))
+    self.output_file.write(CodeWriter.RETURN_ASM.format())
+
 
     
