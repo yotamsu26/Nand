@@ -495,6 +495,18 @@ class CodeWriter:
 
   def write_return(self) -> None:
     """Writes assembly code that affects the return command."""
+    # This is irrelevant for project 7,
+    # you will implement this in project 8!
+    # The pseudo-code of "return" is:
+    # frame = LCL                   // frame is a temporary variable
+    # return_address = *(frame-5)   // puts the return address in a temp var
+    # *ARG = pop()                  // repositions the return value for the caller
+    # SP = ARG + 1                  // repositions SP for the caller
+    # THAT = *(frame-1)             // restores THAT for the caller
+    # THIS = *(frame-2)             // restores THIS for the caller
+    # ARG = *(frame-3)              // restores ARG for the caller
+    # LCL = *(frame-4)              // restores LCL for the caller
+    # goto return_address           // go to the return address
     self.output_file.write(CodeWriter.RET_AND_LCL_ADDRESS_ASM.format())
     self.write_pop("argument", 0)
     self.output_file.write(CodeWriter.SP_TO_ARG_PLUS_1_ASM.format())
