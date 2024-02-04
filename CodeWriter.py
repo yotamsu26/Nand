@@ -187,12 +187,12 @@ class CodeWriter:
       "@SP\n" \
       "M=D\n"
 
-  FUNCTION_LABEL = "// write function {1}\n" \
-      "({2}.{1}"
+  FUNCTION_LABEL = "// write function {0}\n" \
+      "({1}.{0})\n"
 
   #USAGE: 1 -> return label
   PUSH_RETURN_LABEL = "// push return label\n" \
-    "{1}\n" \
+    "{0}\n" \
       "D=A\n" \
       "@SP\n" \
       "A=M\n" \
@@ -201,8 +201,8 @@ class CodeWriter:
       "M=M+1\n"
 
   ##USAGE: 1 -> name of the field (LCL, THIS ..)
-  PUSH_ENV_FIELD = "// push {1}\n" \
-      "@{1}\n" \
+  PUSH_ENV_FIELD = "// push {0}\n" \
+      "@{0}\n" \
       "D=M\n" \
       "@SP\n" \
       "A=M\n" \
@@ -229,12 +229,12 @@ class CodeWriter:
 
   #USAGE: 1 -> file name, 2 -> function name
   JUMP_TO_FUNC = "// jump to func\n" \
-      "@{1}.{2}\n" \
+      "@{0}.{1}\n" \
       "0;JMP\n"
 
   #USAGE: 1 -> caller name, 2 -> filename, 3 -> label counter
   GENERATE_RETURN_LABEL = "// insert return point\n" \
-      "({2}.{1}$ret.{3})\n"
+      "({1}.{0}$ret.{2})\n"
 
   def __init__(self, output_file: typing.TextIO) -> None:
     """Initializes the CodeWriter.
@@ -448,7 +448,7 @@ class CodeWriter:
     self.current_function = function_name
     self.output_file.write(CodeWriter.FUNCTION_LABEL.format(function_name, self.file_name))
     for i in range(n_vars):
-        self.write_push_pop(command="push", segment="constant", index=0)
+        self.write_push_pop(command="C_PUSH", segment="constant", index=0)
 
 
 

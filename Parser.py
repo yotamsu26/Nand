@@ -132,4 +132,4 @@ class Parser:
         called only if the current command is "C_PUSH", "C_POP", 
         "C_FUNCTION" or "C_CALL".
     """
-    return self.current_command.split(' ')[2]
+    return int(self.current_command.split(' ')[2])
