@@ -144,6 +144,14 @@ class CodeWriter:
       "A=M-1\n" \
       "M={1}M\n"
   
+  INIT_ASM = "// bootstrap\n" \
+      "@256\n" \
+      "D=A\n" \
+      "@SP\n" \
+      "M=D\n" \
+      "@Sys.Sys.init\n" \
+      "0;JMP\n"
+  
   FUNC_LABEL_ASM = " // label {1}\n" \
       "({0}${1})\n"
   
@@ -199,7 +207,7 @@ class CodeWriter:
 
   #USAGE: 1 -> return label
   PUSH_RETURN_LABEL = "// push return label\n" \
-    "{0}\n" \
+    "@{0}\n" \
       "D=A\n" \
       "@SP\n" \
       "A=M\n" \
@@ -223,7 +231,7 @@ class CodeWriter:
       "D=A\n" \
       "@5\n" \
       "D=D-A\n" \
-      "@{1}\n" \
+      "@{0}\n" \
       "D=D-A\n" \
       "@ARG\n" \
       "M=D\n"
@@ -240,8 +248,7 @@ class CodeWriter:
       "0;JMP\n"
 
   #USAGE: 1 -> caller name, 2 -> filename, 3 -> label counter
-  GENERATE_RETURN_LABEL = "// insert return point\n" \
-      "({1}.{0}$ret.{2})\n"
+  GENERATE_RETURN_LABEL = "{1}.{0}$ret.{2}"
 
   def __init__(self, output_file: typing.TextIO) -> None:
     """Initializes the CodeWriter.
@@ -255,7 +262,7 @@ class CodeWriter:
                   "that": "THAT", "temp": 5, "pointer": 3, "static": 16}
     self.comp_op = 0
     # in order to write function label (e.g. foo$bar), this var store the current method
-    self._cur_method = ""
+    self._cur_method = "Sys.init"
     self.command_functions = {
     "add": lambda: self.write_bit_op("add", "+"),
     "sub": lambda: self.write_bit_op("sub", "-"),
@@ -269,7 +276,10 @@ class CodeWriter:
     "or": lambda: self.write_bit_op("or", "|"),
     "not": lambda: self.write_unary_op("not", "!"),
     }
-    
+
+  def bootstrap(self) -> None:
+    """Writes the assembly code that is the translation of the bootstrap code."""
+    self.output_file.write(CodeWriter.INIT_ASM)
 
   def set_file_name(self, filename: str) -> None:
     """Informs the code writer that the translation of a new VM file is 
@@ -496,7 +506,7 @@ class CodeWriter:
     # goto function_name    // transfers control to the callee
     self.output_file.write(CodeWriter.JUMP_TO_FUNC.format(function_name, self.file_name))
     # (return_address)      // injects the return address label into the code
-    self.output_file.write(return_address)
+    self.output_file.write("(" + return_address + ")\n")
     self.comp_op += 1
     #TODO consider join all the assembly code and then write it to the output file
 
