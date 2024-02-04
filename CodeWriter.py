@@ -144,8 +144,11 @@ class CodeWriter:
       "A=M-1\n" \
       "M={1}M\n"
   
-  LABEL_ASM = " // label {1}\n" \
+  FUNC_LABEL_ASM = " // label {1}\n" \
       "({0}${1})\n"
+  
+  LABEL_ASM = " // label {0}\n" \
+      "({0})\n"
   
   GOTO_ASM = "// goto {0}\n" \
       "@{0}\n" \
@@ -399,10 +402,10 @@ class CodeWriter:
     Args:
         label (str): the label to write.
     """
-    assembly_label = CodeWriter.LABEL_ASM.format(self.current_function, label)
-    # TODO : add self.current_function_name
-
-    self.output_file.write(assembly_label)
+    if self.current_function == "":
+      self.output_file.write(CodeWriter.LABEL_ASM.format(label))
+    else:
+      self.output_file.write(CodeWriter.FUNC_LABEL_ASM.format(self.current_function, label))
 
   def write_goto(self, label: str) -> None:
     """Writes assembly code that affects the goto command.
