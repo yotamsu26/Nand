@@ -178,6 +178,8 @@ class CodeWriter:
       "M=D\n" \
       "@5\n" \
       "D=D-A\n" \
+      "A=D\n" \
+      "D=M\n" \
       "@retAddr\n" \
       "M=D\n"
   
