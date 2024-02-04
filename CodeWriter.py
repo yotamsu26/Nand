@@ -184,8 +184,7 @@ class CodeWriter:
       "M=D\n"
       
   SP_TO_ARG_PLUS_1_ASM = "@ARG\n" \
-      "A=M\n" \
-      "M=D\n" \
+      "D=M\n" \
       "D=D+1\n" \
       "@SP\n" \
       "M=D\n"
@@ -195,10 +194,7 @@ class CodeWriter:
   
   RETURN_ASM = "// return\n" \
       "@retAddr\n" \
-      "D=M\n" \
-      "@SP\n" \
-      "M=D\n" \
-      "A=D\n" \
+      "A=M\n" \
       "0;JMP\n"
 
   #USAGE: 1 -> return label
@@ -525,7 +521,7 @@ class CodeWriter:
     self.output_file.write(CodeWriter.END_FRAME_ASM.format(2, "THIS"))
     self.output_file.write(CodeWriter.END_FRAME_ASM.format(3, "ARG"))
     self.output_file.write(CodeWriter.END_FRAME_ASM.format(4, "LCL"))
-    self.output_file.write(CodeWriter.RETURN_ASM.format())
+    self.output_file.write(CodeWriter.RETURN_ASM)
 
 
     
