@@ -149,7 +149,7 @@ class CodeWriter:
       "D=A\n" \
       "@SP\n" \
       "M=D\n" \
-      "@Sys.Sys.init\n" \
+      "@{0}.Sys.init\n" \
       "0;JMP\n"
   
   FUNC_LABEL_ASM = " // label {1}\n" \
@@ -159,7 +159,7 @@ class CodeWriter:
       "({0})\n"
   
   GOTO_ASM = "// goto {0}\n" \
-      "@{0}\n" \
+      "@{0}${1}\n" \
       "0;JMP\n"
   
   IF_GOTO_ASM = "// if-goto {0}\n" \
@@ -244,11 +244,11 @@ class CodeWriter:
 
   #USAGE: 1 -> file name, 2 -> function name
   JUMP_TO_FUNC = "// jump to func\n" \
-      "@{0}.{1}\n" \
+      "@{0}\n" \
       "0;JMP\n"
 
   #USAGE: 1 -> caller name, 2 -> filename, 3 -> label counter
-  GENERATE_RETURN_LABEL = "{1}.{0}$ret.{2}"
+  GENERATE_RETURN_LABEL = "{0}$ret.{1}"
 
   def __init__(self, output_file: typing.TextIO) -> None:
     """Initializes the CodeWriter.
@@ -257,12 +257,11 @@ class CodeWriter:
           output_stream (typing.TextIO): output stream.
     """
     self.output_file = output_file
-    self.file_name, self.current_function = "", ""
+    self.file_name, self.current_function = "", ["init"]
     self.segment_dic = {"local": "LCL", "argument": "ARG", "this": "THIS",
                   "that": "THAT", "temp": 5, "pointer": 3, "static": 16}
     self.comp_op = 0
     # in order to write function label (e.g. foo$bar), this var store the current method
-    self._cur_method = "Sys.init"
     self.command_functions = {
     "add": lambda: self.write_bit_op("add", "+"),
     "sub": lambda: self.write_bit_op("sub", "-"),
@@ -279,7 +278,7 @@ class CodeWriter:
 
   def bootstrap(self) -> None:
     """Writes the assembly code that is the translation of the bootstrap code."""
-    self.output_file.write(CodeWriter.INIT_ASM)
+    self.output_file.write(CodeWriter.INIT_ASM.format(self.file_name))
 
   def set_file_name(self, filename: str) -> None:
     """Informs the code writer that the translation of a new VM file is 
@@ -422,7 +421,7 @@ class CodeWriter:
     if self.current_function == "":
       self.output_file.write(CodeWriter.LABEL_ASM.format(label))
     else:
-      self.output_file.write(CodeWriter.FUNC_LABEL_ASM.format(self.current_function, label))
+      self.output_file.write(CodeWriter.FUNC_LABEL_ASM.format(self.current_function[-1], label))
 
   def write_goto(self, label: str) -> None:
     """Writes assembly code that affects the goto command.
@@ -430,7 +429,7 @@ class CodeWriter:
     Args:
         label (str): the label to go to.
     """
-    assembly_goto = CodeWriter.GOTO_ASM.format(label)
+    assembly_goto = CodeWriter.GOTO_ASM.format(self.current_function[-1], label)
 
     self.output_file.write(assembly_goto)
 
@@ -462,7 +461,7 @@ class CodeWriter:
     # (function_name)       // injects a function entry label into the code
     # repeat n_vars times:  // n_vars = number of local variables
     #   push constant 0     // initializes the local variables to 0
-    self.current_function = function_name
+    self.current_function.append(f"{self.file_name}.{function_name}")
     self.output_file.write(CodeWriter.FUNCTION_LABEL.format(function_name, self.file_name))
     for i in range(n_vars):
         self.write_push_pop(command="C_PUSH", segment="constant", index=0)
@@ -489,7 +488,8 @@ class CodeWriter:
     # you will implement this in project 8!
     # The pseudo-code of "call function_name n_args" is:
     # push return_address   // generates a label and pushes it to the stack
-    return_address = CodeWriter.GENERATE_RETURN_LABEL.format(self._cur_method, self.file_name, self.comp_op)
+
+    return_address = CodeWriter.GENERATE_RETURN_LABEL.format(self.current_function[-1], self.comp_op)
     self.output_file.write(CodeWriter.PUSH_RETURN_LABEL.format(return_address))
     # push LCL              // saves LCL of the caller
     self.output_file.write(CodeWriter.PUSH_ENV_FIELD.format("LCL"))
@@ -504,10 +504,11 @@ class CodeWriter:
     # LCL = SP              // repositions LCL
     self.output_file.write(CodeWriter.SET_LCL_EQ_SP)
     # goto function_name    // transfers control to the callee
-    self.output_file.write(CodeWriter.JUMP_TO_FUNC.format(function_name, self.file_name))
+    self.output_file.write(CodeWriter.JUMP_TO_FUNC.format(function_name))
     # (return_address)      // injects the return address label into the code
     self.output_file.write("(" + return_address + ")\n")
     self.comp_op += 1
+
     #TODO consider join all the assembly code and then write it to the output file
 
   def write_return(self) -> None:
@@ -532,6 +533,7 @@ class CodeWriter:
     self.output_file.write(CodeWriter.END_FRAME_ASM.format(3, "ARG"))
     self.output_file.write(CodeWriter.END_FRAME_ASM.format(4, "LCL"))
     self.output_file.write(CodeWriter.RETURN_ASM)
+    self.current_function.pop()
 
 
     
