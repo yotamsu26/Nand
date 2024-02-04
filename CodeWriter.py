@@ -228,7 +228,7 @@ class CodeWriter:
   #USAGE: 1 -> number of arguments callee except to get
   SET_NEW_ARG = "// ARG = SP-5-n_args\n" \
       "@SP\n" \
-      "D=A\n" \
+      "D=M\n" \
       "@5\n" \
       "D=D-A\n" \
       "@{0}\n" \
@@ -504,7 +504,7 @@ class CodeWriter:
     # LCL = SP              // repositions LCL
     self.output_file.write(CodeWriter.SET_LCL_EQ_SP)
     # goto function_name    // transfers control to the callee
-    self.output_file.write(CodeWriter.JUMP_TO_FUNC.format(function_name))
+    self.output_file.write(CodeWriter.JUMP_TO_FUNC.format(f"{self.file_name}.{function_name}"))
     # (return_address)      // injects the return address label into the code
     self.output_file.write("(" + return_address + ")\n")
     self.comp_op += 1
