@@ -149,7 +149,7 @@ class CodeWriter:
       "D=A\n" \
       "@SP\n" \
       "M=D\n" \
-      "@{0}.Sys.init\n" \
+      "@Sys.init\n" \
       "0;JMP\n"
   
   FUNC_LABEL_ASM = " // label {1}\n" \
@@ -162,12 +162,12 @@ class CodeWriter:
       "@{0}${1}\n" \
       "0;JMP\n"
   
-  IF_GOTO_ASM = "// if-goto {0}\n" \
+  IF_GOTO_ASM = "// if-goto {0}${1}\n" \
       "@SP\n" \
       "M=M-1\n" \
       "A=M\n" \
       "D=M\n" \
-      "@{0}\n" \
+      "@{0}${1}\n" \
       "D;JGT\n" \
       "D;JLT\n"
   
@@ -200,7 +200,7 @@ class CodeWriter:
       "M=D\n"
 
   FUNCTION_LABEL = "// write function {0}\n" \
-      "({1}.{0})\n"
+      "({0})\n"
   
   RETURN_ASM = "// return\n" \
       "@retAddr\n" \
@@ -280,7 +280,7 @@ class CodeWriter:
 
   def bootstrap(self) -> None:
     """Writes the assembly code that is the translation of the bootstrap code."""
-    self.output_file.write(CodeWriter.INIT_ASM.format(self.file_name))
+    self.output_file.write(CodeWriter.INIT_ASM)
 
   def set_file_name(self, filename: str) -> None:
     """Informs the code writer that the translation of a new VM file is 
@@ -441,7 +441,7 @@ class CodeWriter:
     Args:
         label (str): the label to go to.
     """
-    assembly_if = CodeWriter.IF_GOTO_ASM.format(label)
+    assembly_if = CodeWriter.IF_GOTO_ASM.format(self.current_function[-1], label)
 
     self.output_file.write(assembly_if)
 
@@ -463,8 +463,8 @@ class CodeWriter:
     # (function_name)       // injects a function entry label into the code
     # repeat n_vars times:  // n_vars = number of local variables
     #   push constant 0     // initializes the local variables to 0
-    self.current_function.append(f"{self.file_name}.{function_name}")
-    self.output_file.write(CodeWriter.FUNCTION_LABEL.format(function_name, self.file_name))
+    self.current_function.append(f"{function_name}")
+    self.output_file.write(CodeWriter.FUNCTION_LABEL.format(function_name))
     for i in range(n_vars):
         self.write_push_pop(command="C_PUSH", segment="constant", index=0)
 
@@ -502,11 +502,11 @@ class CodeWriter:
     # push THAT             // saves THAT of the caller
     self.output_file.write(CodeWriter.PUSH_ENV_FIELD.format("THAT"))
     # ARG = SP-5-n_args     // repositions ARG
-    self.output_file.write(CodeWriter.SET_NEW_ARG.format(f"{n_args}"))
+    self.output_file.write(CodeWriter.SET_NEW_ARG.format(f"{int(n_args)}"))
     # LCL = SP              // repositions LCL
     self.output_file.write(CodeWriter.SET_LCL_EQ_SP)
     # goto function_name    // transfers control to the callee
-    self.output_file.write(CodeWriter.JUMP_TO_FUNC.format(f"{self.file_name}.{function_name}"))
+    self.output_file.write(CodeWriter.JUMP_TO_FUNC.format(f"{function_name}"))
     # (return_address)      // injects the return address label into the code
     self.output_file.write("(" + return_address + ")\n")
     self.comp_op += 1
@@ -535,7 +535,7 @@ class CodeWriter:
     self.output_file.write(CodeWriter.END_FRAME_ASM.format(3, "ARG"))
     self.output_file.write(CodeWriter.END_FRAME_ASM.format(4, "LCL"))
     self.output_file.write(CodeWriter.RETURN_ASM)
-    self.current_function.pop()
+    #self.current_function.pop()
 
 
     
