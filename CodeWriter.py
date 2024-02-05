@@ -149,8 +149,7 @@ class CodeWriter:
       "D=A\n" \
       "@SP\n" \
       "M=D\n" \
-      "@Sys.init\n" \
-      "0;JMP\n"
+
   
   FUNC_LABEL_ASM = " // label {1}\n" \
       "({0}${1})\n"
@@ -174,17 +173,17 @@ class CodeWriter:
   RET_AND_LCL_ADDRESS_ASM = "// return\n" \
       "@LCL\n" \
       "D=M\n" \
-      "@endFrame\n" \
+      "@R14\n" \
       "M=D\n" \
       "@5\n" \
       "D=D-A\n" \
       "A=D\n" \
       "D=M\n" \
-      "@retAddr\n" \
+      "@R15\n" \
       "M=D\n"
   
   END_FRAME_ASM = "// endFrame {1}\n" \
-  "@endFrame\n" \
+      "@R14\n" \
       "D=M\n" \
       "@{0}\n" \
       "D=D-A\n" \
@@ -203,7 +202,7 @@ class CodeWriter:
       "({0})\n"
   
   RETURN_ASM = "// return\n" \
-      "@retAddr\n" \
+      "@R15\n" \
       "A=M\n" \
       "0;JMP\n"
 
@@ -231,8 +230,6 @@ class CodeWriter:
   SET_NEW_ARG = "// ARG = SP-5-n_args\n" \
       "@SP\n" \
       "D=M\n" \
-      "@5\n" \
-      "D=D-A\n" \
       "@{0}\n" \
       "D=D-A\n" \
       "@ARG\n" \
@@ -281,6 +278,8 @@ class CodeWriter:
   def bootstrap(self) -> None:
     """Writes the assembly code that is the translation of the bootstrap code."""
     self.output_file.write(CodeWriter.INIT_ASM)
+    self.write_call(function_name="Sys.init", n_args=0)
+
 
   def set_file_name(self, filename: str) -> None:
     """Informs the code writer that the translation of a new VM file is 
@@ -354,10 +353,12 @@ class CodeWriter:
   def pointer_static_push(self, segment: str, index: int) -> None:
     '''Writes the assembly code that is the translation of the given command, where command is
       C_PUSH and segment is static or pointer'''
+    add = self.segment_dic[segment]+int(index)
+    if segment == "static":
+        add = f"{self.file_name}.{index}"
     
     assembly_pointer_static_push = CodeWriter.PUSH_POINTER_OR_STATIC_ASM.format(segment,
-                                                             index,
-                                                            self.segment_dic[segment]+int(index))
+                                                             index, add)
 
     self.output_file.write(assembly_pointer_static_push)
 
@@ -365,10 +366,12 @@ class CodeWriter:
   def pointer_static_pop(self, segment: str, index: int) -> None:
     '''Writes the assembly code that is the translation of the given command,
       where command is C_POP and segment is pointer or static'''
+    add = self.segment_dic[segment]+int(index)
+    if segment == "static":
+        add = f"{self.file_name}.{index}"
 
     assembly_pointer_static_pop = CodeWriter.POP_STATIC_OR_POINTER.format(segment,
-                                                             index,
-                                                              self.segment_dic[segment]+int(index))
+                                                             index, add)
 
     self.output_file.write(assembly_pointer_static_pop)
 
@@ -502,7 +505,7 @@ class CodeWriter:
     # push THAT             // saves THAT of the caller
     self.output_file.write(CodeWriter.PUSH_ENV_FIELD.format("THAT"))
     # ARG = SP-5-n_args     // repositions ARG
-    self.output_file.write(CodeWriter.SET_NEW_ARG.format(f"{int(n_args)}"))
+    self.output_file.write(CodeWriter.SET_NEW_ARG.format(f"{int(n_args) + 5}"))
     # LCL = SP              // repositions LCL
     self.output_file.write(CodeWriter.SET_LCL_EQ_SP)
     # goto function_name    // transfers control to the callee
