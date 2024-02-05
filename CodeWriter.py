@@ -248,7 +248,7 @@ class CodeWriter:
 
   #USAGE: 1 -> caller name, 2 -> filename, 3 -> label counter
   GENERATE_RETURN_LABEL = "{0}$ret.{1}"
-
+  comp_op = 0
   def __init__(self, output_file: typing.TextIO) -> None:
     """Initializes the CodeWriter.
 
@@ -259,7 +259,7 @@ class CodeWriter:
     self.file_name, self.current_function = "", ["init"]
     self.segment_dic = {"local": "LCL", "argument": "ARG", "this": "THIS",
                   "that": "THAT", "temp": 5, "pointer": 3, "static": 16}
-    self.comp_op = 0
+    #self.comp_op = 0
     # in order to write function label (e.g. foo$bar), this var store the current method
     self.command_functions = {
     "add": lambda: self.write_bit_op("add", "+"),
@@ -317,9 +317,10 @@ class CodeWriter:
 
   def write_cmp(self, command: str) -> None:
     '''Writes the assembly code that is the translation of the gt arithmetic command.'''
-    self.comp_op += 1
+    CodeWriter.comp_op += 1
     asm_command = "J" + command.upper()
-    assembly_gt = CodeWriter.COMPARE_ASM.format(command, self.comp_op, asm_command)
+    assembly_gt = CodeWriter.COMPARE_ASM.format(command, CodeWriter.comp_op, asm_command)
+    CodeWriter.comp_op += 1
 
     self.output_file.write(assembly_gt)
 
@@ -353,12 +354,12 @@ class CodeWriter:
   def pointer_static_push(self, segment: str, index: int) -> None:
     '''Writes the assembly code that is the translation of the given command, where command is
       C_PUSH and segment is static or pointer'''
-    add = self.segment_dic[segment]+int(index)
+    addr = self.segment_dic[segment]+int(index)
     if segment == "static":
-        add = f"{self.file_name}.{index}"
+        addr = f"{self.file_name}.{index}"
     
     assembly_pointer_static_push = CodeWriter.PUSH_POINTER_OR_STATIC_ASM.format(segment,
-                                                             index, add)
+                                                             index, addr)
 
     self.output_file.write(assembly_pointer_static_push)
 
@@ -366,12 +367,12 @@ class CodeWriter:
   def pointer_static_pop(self, segment: str, index: int) -> None:
     '''Writes the assembly code that is the translation of the given command,
       where command is C_POP and segment is pointer or static'''
-    add = self.segment_dic[segment]+int(index)
+    addr = self.segment_dic[segment]+int(index)
     if segment == "static":
-        add = f"{self.file_name}.{index}"
+        addr = f"{self.file_name}.{index}"
 
     assembly_pointer_static_pop = CodeWriter.POP_STATIC_OR_POINTER.format(segment,
-                                                             index, add)
+                                                             index, addr)
 
     self.output_file.write(assembly_pointer_static_pop)
 
@@ -437,6 +438,7 @@ class CodeWriter:
     assembly_goto = CodeWriter.GOTO_ASM.format(self.current_function[-1], label)
 
     self.output_file.write(assembly_goto)
+    CodeWriter.comp_op += 1
 
   def write_if(self, label: str) -> None:
     """Writes assembly code that affects the if-goto command. 
@@ -447,6 +449,7 @@ class CodeWriter:
     assembly_if = CodeWriter.IF_GOTO_ASM.format(self.current_function[-1], label)
 
     self.output_file.write(assembly_if)
+    CodeWriter.comp_op += 1
 
   def write_function(self, function_name: str, n_vars: int) -> None:
     """Writes assembly code that affects the function command. 
@@ -494,7 +497,7 @@ class CodeWriter:
     # The pseudo-code of "call function_name n_args" is:
     # push return_address   // generates a label and pushes it to the stack
 
-    return_address = CodeWriter.GENERATE_RETURN_LABEL.format(self.current_function[-1], self.comp_op)
+    return_address = CodeWriter.GENERATE_RETURN_LABEL.format(self.current_function[-1], CodeWriter.comp_op)
     self.output_file.write(CodeWriter.PUSH_RETURN_LABEL.format(return_address))
     # push LCL              // saves LCL of the caller
     self.output_file.write(CodeWriter.PUSH_ENV_FIELD.format("LCL"))
@@ -512,7 +515,7 @@ class CodeWriter:
     self.output_file.write(CodeWriter.JUMP_TO_FUNC.format(f"{function_name}"))
     # (return_address)      // injects the return address label into the code
     self.output_file.write("(" + return_address + ")\n")
-    self.comp_op += 1
+    CodeWriter.comp_op += 1
 
     #TODO consider join all the assembly code and then write it to the output file
 
