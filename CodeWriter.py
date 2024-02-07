@@ -21,7 +21,7 @@ class CodeWriter:
                 "A=M\n" \
                 "M=D\n" 
   
-  POP_ASM = "// pop {0} {1}\n"\
+  POP_REG_ASM = "// pop {0} {1}\n"\
                       "@{1}\n" \
                       "D=A\n" \
                       "@{2}\n" \
@@ -30,48 +30,63 @@ class CodeWriter:
                       "M=D\n" + \
                       POP_SP_ASM
 
-  POP_TEMP_ASM = "// pop {0} {1}\n"\
-                      "@{1}\n" \
+  POP_TEMP_ASM = "// pop temp {0}\n"\
+                      "@{0}\n" \
                       "D=A\n" \
-                      "@{2}\n" \
+                      "@{1}\n" \
                       "D=D+A\n" \
                       "@R13\n" \
                       "M=D\n" +\
                       POP_SP_ASM
 
-  POP_STATIC_OR_POINTER = "// pop {0} {1}\n"\
+  POP_STATIC = "// pop static\n"\
                   "@SP\n" \
                   "M=M-1\n" \
                   "A=M\n" \
                   "D=M\n" \
-                  "@{2}\n" \
+                  "@{0}\n" \
                   "M=D\n"
-
-  PUSH_POINTER_OR_STATIC_ASM = "// push {0} {1}\n"\
-                  "@{2}\n" \
-                  "D=M\n" \
-                  "@SP\n" \
-                  "A=M\n" \
-                  "M=D\n" \
-                  "@SP\n" \
-                  "M=M+1\n"
   
+  POP_POINTER = "// pop pointer {0}\n"\
+                  "@{0}\n" \
+                  "D=A\n" \
+                  "@{1}\n" \
+                  "D=D+A\n" \
+                  "@R13\n" \
+                  "M=D\n" +\
+                  POP_SP_ASM
+                  
+                
   PUSH_SP_ASM = "@SP\n" \
                 "M=M+1\n" \
                 "A=M-1\n" \
                 "M=D\n"
-
-  CONST_PUSH_ASM = "// push {0} {1}\n" \
+  
+  PUSH_STATIC_ASM = "// push static {0}\n"\
                   "@{1}\n" \
+                  "D=M\n" +\
+                  PUSH_SP_ASM
+  
+  
+  PUSH_POINTER_ASM = "// push pointer {0}\n"\
+                  "@{0}\n" \
+                  "D=A\n" \
+                  "@{1}\n" \
+                  "A=A+D\n" \
+                  "D=M\n" +\
+                  PUSH_SP_ASM
+  
+
+  CONST_PUSH_ASM = "// push const {0}\n" \
+                  "@{0}\n" \
                   "D=A\n" +\
                   PUSH_SP_ASM
 
-  PUSH_TEMP_ASM = "// push {0} {1}\n" \
-                  "@{1}\n" \
+  PUSH_TEMP_ASM = "// push temp {0}\n" \
+                  "@{0}\n" \
                   "D=A\n" \
-                  "@{2}\n" \
-                  "D=D+A\n" \
-                  "A=D\n" \
+                  "@{1}\n" \
+                  "A=A+D\n" \
                   "D=M\n" +\
                   PUSH_SP_ASM
 
@@ -108,15 +123,18 @@ class CodeWriter:
               "D=M\n" \
               "@Y_X_NEGATIVE" + "{1}\n" \
               "D;JLT\n" \
+              "D=1\n" \
               "@INSERT" + "{1}\n" \
               "0;JMP\n" \
               "(X_NEGATIVE" + "{1})\n" \
-              "D=D\n" \
+              "D = -1\n"\
               "@INSERT" + "{1}\n" \
               "0;JMP\n" \
               "(Y_X_NEGATIVE" + "{1})\n" \
               "@R13\n" \
-              "D=M-D\n" \
+              "D=D-M\n" \
+              "@INSERT" + "{1}\n" \
+              "0;JMP\n" \
               "(INSERT" + "{1})\n" \
               "@INESRT_TRUE" + "{1}\n" \
               "D;{2}\n" \
@@ -142,7 +160,7 @@ class CodeWriter:
   UNARY_OP = "// {0} operation\n" \
       "@SP\n" \
       "A=M-1\n" \
-      "M={1}M\n"
+      "M={1}\n"
   
   INIT_ASM = "// bootstrap\n" \
       "@256\n" \
@@ -167,8 +185,7 @@ class CodeWriter:
       "A=M\n" \
       "D=M\n" \
       "@{0}${1}\n" \
-      "D;JGT\n" \
-      "D;JLT\n"
+      "D;JNE\n"
   
   RET_AND_LCL_ADDRESS_ASM = "// return\n" \
       "@LCL\n" \
@@ -209,22 +226,14 @@ class CodeWriter:
   #USAGE: 1 -> return label
   PUSH_RETURN_LABEL = "// push return label\n" \
     "@{0}\n" \
-      "D=A\n" \
-      "@SP\n" \
-      "A=M\n" \
-      "M=D\n" \
-      "@SP\n" \
-      "M=M+1\n"
+      "D=A\n" +\
+      PUSH_SP_ASM
 
   ##USAGE: 1 -> name of the field (LCL, THIS ..)
   PUSH_ENV_FIELD = "// push {0}\n" \
       "@{0}\n" \
-      "D=M\n" \
-      "@SP\n" \
-      "A=M\n" \
-      "M=D\n" \
-      "@SP\n" \
-      "M=M+1\n"
+      "D=M\n" +\
+      PUSH_SP_ASM
 
   #USAGE: 1 -> number of arguments callee except to get
   SET_NEW_ARG = "// ARG = SP-5-n_args\n" \
@@ -248,36 +257,37 @@ class CodeWriter:
 
   #USAGE: 1 -> caller name, 2 -> filename, 3 -> label counter
   GENERATE_RETURN_LABEL = "{0}$ret.{1}"
-  comp_op = 0
+  comp_op, function_counter = 0, 0
+
   def __init__(self, output_file: typing.TextIO) -> None:
     """Initializes the CodeWriter.
 
     Args:
           output_stream (typing.TextIO): output stream.
     """
-    self.output_file = output_file
-    self.file_name, self.current_function = "", ["init"]
-    self.segment_dic = {"local": "LCL", "argument": "ARG", "this": "THIS",
+    self.__output_file = output_file
+    self.__file_name, self.__current_function = "", ''
+    self.__segment_dic = {"local": "LCL", "argument": "ARG", "this": "THIS",
                   "that": "THAT", "temp": 5, "pointer": 3, "static": 16}
     #self.comp_op = 0
     # in order to write function label (e.g. foo$bar), this var store the current method
-    self.command_functions = {
-    "add": lambda: self.write_bit_op("add", "+"),
-    "sub": lambda: self.write_bit_op("sub", "-"),
-    "eq": lambda: self.write_cmp("eq"),
-    "lt": lambda: self.write_cmp("lt"),
-    "gt": lambda: self.write_cmp("gt"),
-    "neg": lambda: self.write_unary_op("neg", "-"),
-    "shiftright": lambda: self.write_unary_op("shiftright", ">>"),
-    "shiftleft": lambda: self.write_unary_op("shiftleft", "<<"),
-    "and": lambda: self.write_bit_op("and", "&"),
-    "or": lambda: self.write_bit_op("or", "|"),
-    "not": lambda: self.write_unary_op("not", "!"),
+    self.__command_functions = {
+    "add": lambda: self.__bit_op("add", "+"),
+    "sub": lambda: self.__bit_op("sub", "-"),
+    "eq": lambda: self.__cmp_op("eq"),
+    "lt": lambda: self.__cmp_op("lt"),
+    "gt": lambda: self.__cmp_op("gt"),
+    "neg": lambda: self.__unary_op("neg", "-"),
+    "shiftright": lambda: self.__unary_op("shiftright", ">>"),
+    "shiftleft": lambda: self.__unary_op("shiftleft", "<<"),
+    "and": lambda: self.__bit_op("and", "&"),
+    "or": lambda: self.__bit_op("or", "|"),
+    "not": lambda: self.__unary_op("not", "!"),
     }
 
   def bootstrap(self) -> None:
     """Writes the assembly code that is the translation of the bootstrap code."""
-    self.output_file.write(CodeWriter.INIT_ASM)
+    self.__output_file.write(CodeWriter.INIT_ASM)
     self.write_call(function_name="Sys.init", n_args=0)
 
 
@@ -288,7 +298,7 @@ class CodeWriter:
     Args:
         filename (str): The name of the VM file.
     """
-    self.file_name = filename
+    self.__file_name = filename
 
 
   def write_arithmetic(self, command: str) -> None:
@@ -300,29 +310,29 @@ class CodeWriter:
     Args:
         command (str): an arithmetic command.
     """
-    if command in self.command_functions:
-      self.command_functions[command]()
+    if command in self.__command_functions:
+      self.__command_functions[command]()
 
-  def write_unary_op(self, command: str, unary_op: str) -> None:
+  def __unary_op(self, command: str, unary_op: str) -> None:
     """Writes the assembly code that is the translation of the given unary operation command."""
-    assembly_unary_op = CodeWriter.UNARY_OP.format(command, unary_op)
+    if unary_op in ["<<", ">>"]:
+      self.__output_file.write(CodeWriter.UNARY_OP.format(command, "M" + unary_op))
+    else:
+      self.__output_file.write(CodeWriter.UNARY_OP.format(command, unary_op + "M"))
 
-    self.output_file.write(assembly_unary_op)
-
-  def write_bit_op(self, command: str, bit_op: str) -> None:
+  def __bit_op(self, command: str, bit_op: str) -> None:
     """Writes the assembly code that is the translation of the given bit operation command."""
     assembly_bit_op = CodeWriter.BIT_OP_ASM.format(command, bit_op)
 
-    self.output_file.write(assembly_bit_op)
+    self.__output_file.write(assembly_bit_op)
 
-  def write_cmp(self, command: str) -> None:
+  def __cmp_op(self, command: str) -> None:
     '''Writes the assembly code that is the translation of the gt arithmetic command.'''
-    CodeWriter.comp_op += 1
     asm_command = "J" + command.upper()
     assembly_gt = CodeWriter.COMPARE_ASM.format(command, CodeWriter.comp_op, asm_command)
     CodeWriter.comp_op += 1
 
-    self.output_file.write(assembly_gt)
+    self.__output_file.write(assembly_gt)
 
   def write_push_pop(self, command: str, segment: str, index: int) -> None:
     """Writes assembly code that is the translation of the given 
@@ -335,83 +345,102 @@ class CodeWriter:
     """
     
     if command == "C_PUSH":
-      if segment == "constant":
-        self.constant_push(index)
-      elif segment == "temp":
-        self.temp_push(index)
-      elif segment == "pointer" or segment == "static":
-        self.pointer_static_push(segment, index)
-      else:
-        self.write_push(segment, index)
+      self.__write_push(segment, index)
     elif command == "C_POP":
-      if segment == "temp":
-        self.temp_pop(index)
-      elif segment == "pointer" or segment == "static":
-        self.pointer_static_pop(segment, index)
-      else:
-        self.write_pop(segment, index)
+      self.__write_pop(segment, index)
 
-  def pointer_static_push(self, segment: str, index: int) -> None:
+  def __write_pop(self, segment: str, index: int) -> None:
+    '''Writes the assembly code that is the translation of the given command, where command is pop'''
+    if segment == "temp":
+      self.__temp_pop(index)
+    elif segment == "static":
+      self.__static_pop(index)
+    elif segment == "pointer":
+      self.__pointer_pop(index)
+    else:
+      self.__reg_pop(segment, index)
+      
+  def __write_push(self, segment: str, index: int) -> None:
+      '''Writes the assembly code that is the translation of the given command, where command is push'''
+      if segment == "constant":
+        self.__constant_push(index)
+      elif segment == "temp" :
+        self.__temp_push(index)
+      elif segment == "static":
+        self.__static_push(index)
+      elif segment == "pointer":
+        self.__pointer_push( index)
+      else:
+        self.__reg_push(segment, index)
+
+  def __pointer_push(self, index: int) -> None:
+    '''Writes the assembly code that is the translation of the given command, where command is
+      C_PUSH and segment is pointer'''
+    assembly_pointer_push = CodeWriter.PUSH_POINTER_ASM.format(index, self.__segment_dic["pointer"])
+
+    self.__output_file.write(assembly_pointer_push)
+
+  def __pointer_pop(self, index: int) -> None:
+    '''Writes the assembly code that is the translation of the given command, where command is
+      C_POP and segment is pointer'''
+    assembly_pointer_pop = CodeWriter.POP_POINTER.format(index, self.__segment_dic["pointer"])
+
+    self.__output_file.write(assembly_pointer_pop)
+
+  def __static_push(self, index: int) -> None:
     '''Writes the assembly code that is the translation of the given command, where command is
       C_PUSH and segment is static or pointer'''
-    addr = self.segment_dic[segment]+int(index)
-    if segment == "static":
-        addr = f"{self.file_name}.{index}"
+    addr = f"{self.__file_name}.{index}"
     
-    assembly_pointer_static_push = CodeWriter.PUSH_POINTER_OR_STATIC_ASM.format(segment,
-                                                             index, addr)
+    assembly_static_push = CodeWriter.PUSH_STATIC_ASM.format(index, addr)
 
-    self.output_file.write(assembly_pointer_static_push)
-
+    self.__output_file.write(assembly_static_push)
     
-  def pointer_static_pop(self, segment: str, index: int) -> None:
+  def __static_pop(self, index: int) -> None:
     '''Writes the assembly code that is the translation of the given command,
       where command is C_POP and segment is pointer or static'''
-    addr = self.segment_dic[segment]+int(index)
-    if segment == "static":
-        addr = f"{self.file_name}.{index}"
+    addr = f"{self.__file_name}.{index}"
 
-    assembly_pointer_static_pop = CodeWriter.POP_STATIC_OR_POINTER.format(segment,
-                                                             index, addr)
+    assembly_static_pop = CodeWriter.POP_STATIC.format(addr)
 
-    self.output_file.write(assembly_pointer_static_pop)
+    self.__output_file.write(assembly_static_pop)
 
-  def temp_push(self, index: int) -> None:
+  def __temp_push(self, index: int) -> None:
     '''Writes the assembly code that is the translation of the given command,
       where command is C_PUSH and segment is temp'''
-    assembly_temp_push = CodeWriter.PUSH_TEMP_ASM.format("temp", index, "R5")
+    assembly_temp_push = CodeWriter.PUSH_TEMP_ASM.format(index, self.__segment_dic["temp"])
 
-    self.output_file.write(assembly_temp_push)
+    self.__output_file.write(assembly_temp_push)
 
-  def temp_pop(self, index: int) -> None:
+  def __temp_pop(self, index: int) -> None:
     '''Writes the assembly code that is the translation of the given command,
       where command is C_POP and segment is temp'''
-    assembly_temp_pop = CodeWriter.POP_TEMP_ASM.format("temp", index, "R5")
+    assembly_temp_pop = CodeWriter.POP_TEMP_ASM.format(index, self.__segment_dic["temp"])
 
-    self.output_file.write(assembly_temp_pop)
+    self.__output_file.write(assembly_temp_pop)
 
-  def constant_push(self, index: int) -> None:
+  def __constant_push(self, index: int) -> None:
     '''Writes the assembly code that is the translation of the given command,
       where command is C_PUSH and segment is constant'''
-    assembly_constant_push = CodeWriter.CONST_PUSH_ASM.format("constant", index, "SP")
-    self.output_file.write(assembly_constant_push)
+    assembly_constant_push = CodeWriter.CONST_PUSH_ASM.format(index)
+    self.__output_file.write(assembly_constant_push)
 
-  def write_push(self, segment: str, index: int) -> None:
+  def __reg_push(self, segment: str, index: int) -> None:
     '''Writes the assembly code that is the translation of the given command,
       where command is C_PUSH'''
     assembly_push = CodeWriter.PUSH_ASM.format(segment,
                                                 index,
-                                                self.segment_dic[segment])
+                                                self.__segment_dic[segment])
 
-    self.output_file.write(assembly_push)
+    self.__output_file.write(assembly_push)
 
-  def write_pop(self, segment: str, index: int) -> None:
+  def __reg_pop(self, segment: str, index: int) -> None:
     '''Writes the assembly code that is the translation of the given command,
       where command is C_POP'''
-    assembly_pop = CodeWriter.POP_ASM.format(segment, index,
-                                              self.segment_dic[segment])
+    assembly_pop = CodeWriter.POP_REG_ASM.format(segment, index,
+                                              self.__segment_dic[segment])
 
-    self.output_file.write(assembly_pop)
+    self.__output_file.write(assembly_pop)
 
   def write_label(self, label: str) -> None:
     """Writes assembly code that affects the label command. 
@@ -424,10 +453,7 @@ class CodeWriter:
     Args:
         label (str): the label to write.
     """
-    if self.current_function == "":
-      self.output_file.write(CodeWriter.LABEL_ASM.format(label))
-    else:
-      self.output_file.write(CodeWriter.FUNC_LABEL_ASM.format(self.current_function[-1], label))
+    self.__output_file.write(CodeWriter.FUNC_LABEL_ASM.format(self.__current_function, label))
 
   def write_goto(self, label: str) -> None:
     """Writes assembly code that affects the goto command.
@@ -435,10 +461,9 @@ class CodeWriter:
     Args:
         label (str): the label to go to.
     """
-    assembly_goto = CodeWriter.GOTO_ASM.format(self.current_function[-1], label)
+    assembly_goto = CodeWriter.GOTO_ASM.format(self.__current_function, label)
 
-    self.output_file.write(assembly_goto)
-    CodeWriter.comp_op += 1
+    self.__output_file.write(assembly_goto)
 
   def write_if(self, label: str) -> None:
     """Writes assembly code that affects the if-goto command. 
@@ -446,10 +471,9 @@ class CodeWriter:
     Args:
         label (str): the label to go to.
     """
-    assembly_if = CodeWriter.IF_GOTO_ASM.format(self.current_function[-1], label)
+    assembly_if = CodeWriter.IF_GOTO_ASM.format(self.__current_function, label)
 
-    self.output_file.write(assembly_if)
-    CodeWriter.comp_op += 1
+    self.__output_file.write(assembly_if)
 
   def write_function(self, function_name: str, n_vars: int) -> None:
     """Writes assembly code that affects the function command. 
@@ -469,12 +493,10 @@ class CodeWriter:
     # (function_name)       // injects a function entry label into the code
     # repeat n_vars times:  // n_vars = number of local variables
     #   push constant 0     // initializes the local variables to 0
-    self.current_function.append(f"{function_name}")
-    self.output_file.write(CodeWriter.FUNCTION_LABEL.format(function_name))
+    self.__current_function = function_name
+    self.__output_file.write(CodeWriter.FUNCTION_LABEL.format(function_name))
     for i in range(n_vars):
-        self.write_push_pop(command="C_PUSH", segment="constant", index=0)
-
-
+        self.__constant_push(0)
 
   def write_call(self, function_name: str, n_args: int) -> None:
     """Writes assembly code that affects the call command. 
@@ -497,27 +519,27 @@ class CodeWriter:
     # The pseudo-code of "call function_name n_args" is:
     # push return_address   // generates a label and pushes it to the stack
 
-    return_address = CodeWriter.GENERATE_RETURN_LABEL.format(self.current_function[-1], CodeWriter.comp_op)
-    self.output_file.write(CodeWriter.PUSH_RETURN_LABEL.format(return_address))
+    CodeWriter.function_counter += 1
+    return_address = CodeWriter.GENERATE_RETURN_LABEL.format(self.__current_function, CodeWriter.function_counter)
+    command = CodeWriter.PUSH_RETURN_LABEL.format(return_address)
     # push LCL              // saves LCL of the caller
-    self.output_file.write(CodeWriter.PUSH_ENV_FIELD.format("LCL"))
+    command += CodeWriter.PUSH_ENV_FIELD.format("LCL")
     # push ARG              // saves ARG of the caller
-    self.output_file.write(CodeWriter.PUSH_ENV_FIELD.format("ARG"))
+    command += CodeWriter.PUSH_ENV_FIELD.format("ARG")
     # push THIS             // saves THIS of the caller
-    self.output_file.write(CodeWriter.PUSH_ENV_FIELD.format("THIS"))
+    command += CodeWriter.PUSH_ENV_FIELD.format("THIS")
     # push THAT             // saves THAT of the caller
-    self.output_file.write(CodeWriter.PUSH_ENV_FIELD.format("THAT"))
+    command += CodeWriter.PUSH_ENV_FIELD.format("THAT")
     # ARG = SP-5-n_args     // repositions ARG
-    self.output_file.write(CodeWriter.SET_NEW_ARG.format(f"{int(n_args) + 5}"))
+    command += CodeWriter.SET_NEW_ARG.format(f"{int(n_args) + 5}")
     # LCL = SP              // repositions LCL
-    self.output_file.write(CodeWriter.SET_LCL_EQ_SP)
+    command += CodeWriter.SET_LCL_EQ_SP
     # goto function_name    // transfers control to the callee
-    self.output_file.write(CodeWriter.JUMP_TO_FUNC.format(f"{function_name}"))
+    command += CodeWriter.JUMP_TO_FUNC.format(f"{function_name}")
     # (return_address)      // injects the return address label into the code
-    self.output_file.write("(" + return_address + ")\n")
-    CodeWriter.comp_op += 1
+    command += "(" + return_address + ")\n"
 
-    #TODO consider join all the assembly code and then write it to the output file
+    self.__output_file.write(command)
 
   def write_return(self) -> None:
     """Writes assembly code that affects the return command."""
@@ -533,15 +555,25 @@ class CodeWriter:
     # ARG = *(frame-3)              // restores ARG for the caller
     # LCL = *(frame-4)              // restores LCL for the caller
     # goto return_address           // go to the return address
-    self.output_file.write(CodeWriter.RET_AND_LCL_ADDRESS_ASM.format())
-    self.write_pop("argument", 0)
-    self.output_file.write(CodeWriter.SP_TO_ARG_PLUS_1_ASM.format())
-    self.output_file.write(CodeWriter.END_FRAME_ASM.format(1, "THAT"))
-    self.output_file.write(CodeWriter.END_FRAME_ASM.format(2, "THIS"))
-    self.output_file.write(CodeWriter.END_FRAME_ASM.format(3, "ARG"))
-    self.output_file.write(CodeWriter.END_FRAME_ASM.format(4, "LCL"))
-    self.output_file.write(CodeWriter.RETURN_ASM)
-    #self.current_function.pop()
+
+    # frame = LCL, return_address = *(frame-5)
+    self.__output_file.write(CodeWriter.RET_AND_LCL_ADDRESS_ASM.format())
+    # *ARG = pop()
+    self.__reg_pop("argument", 0)
+    # SP = ARG + 1
+    command = CodeWriter.SP_TO_ARG_PLUS_1_ASM.format()
+    # THAT = *(frame-1)
+    command += CodeWriter.END_FRAME_ASM.format(1, "THAT")
+    # THIS = *(frame-2)
+    command += CodeWriter.END_FRAME_ASM.format(2, "THIS")
+    # ARG = *(frame-3)
+    command += CodeWriter.END_FRAME_ASM.format(3, "ARG")
+    # LCL = *(frame-4)
+    command += CodeWriter.END_FRAME_ASM.format(4, "LCL")
+    # goto return_address
+    command += CodeWriter.RETURN_ASM
+
+    self.__output_file.write(command)
 
 
     
