@@ -90,7 +90,7 @@ class CodeWriter:
                   "D=M\n" +\
                   PUSH_SP_ASM
 
-  PUSH_ASM = "// push {0} {1}\n" \
+  PUSH_REG_ASM = "// push {0} {1}\n" \
                   "@{1}\n" \
                   "D=A\n" \
                   "@{2}\n" \
@@ -428,7 +428,7 @@ class CodeWriter:
   def __reg_push(self, segment: str, index: int) -> None:
     '''Writes the assembly code that is the translation of the given command,
       where command is C_PUSH'''
-    assembly_push = CodeWriter.PUSH_ASM.format(segment,
+    assembly_push = CodeWriter.PUSH_REG_ASM.format(segment,
                                                 index,
                                                 self.__segment_dic[segment])
 
