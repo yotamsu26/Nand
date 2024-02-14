@@ -6,6 +6,7 @@ as allowed by the Creative Common Attribution-NonCommercial-ShareAlike 3.0
 Unported [License](https://creativecommons.org/licenses/by-nc-sa/3.0/).
 """
 import typing
+import re
 
 
 class JackTokenizer:
@@ -92,6 +93,48 @@ class JackTokenizer:
     Note that ^, # correspond to shiftleft and shiftright, respectively.
     """
 
+
+    KEYWORD = "KEYWORD"
+    END_COMMENT = "END_COMMENT"
+    START_COMMENT = "START_COMMENT"
+    COMMENT = "COMMENT"
+    SYMBOL = "SYMBOL"
+    IDENTIFIER = "IDENTIFIER"
+    INT_CONST = "INT_CONST"
+    STRING_CONST = "STRING_CONST"
+    #regex
+    STRING_REGEX = '"([^"]*)"'
+    IDENTIFIER_REGEX = "[a-zA-Z_][\w_]*"
+    NUMBER_REGEX = 'r"\d+"'
+    SYMBOL_REGEX = '[\[|\]|\{|\}|\(|\)|\.\,;\+\-*&|<>=~\^#]'
+    KEYWORD_REGEX = 'class|constructor|function|method|field|static|var|int|char|boolean|void|true|false|' \
+                    'null|this|let|do|if|else|while|return'
+    ONELINE_COMMENT_REGEX = r"\/\/.*$"
+    API_COMMENT_START = r"\/\*((?:(?!\*\/).)*)"
+    MULTILINE_COMMENT_END = r"\*\/"
+
+    COMBINED_REGEX = fr"(?P<{COMMENT}>({ONELINE_COMMENT_REGEX}))|"\
+                     fr"(?P<{START_COMMENT}>({API_COMMENT_START}))|"\
+                     fr"(?P<{END_COMMENT}>({MULTILINE_COMMENT_END}))|" \
+                     fr"(?P<{KEYWORD}>({KEYWORD_REGEX}))|"\
+                     fr"(?P<{SYMBOL}>({SYMBOL_REGEX}))|" \
+                     fr"(?P<{STRING_CONST}>({STRING_REGEX}))|"\
+                     fr"(?P<{IDENTIFIER}>({IDENTIFIER_REGEX}))|"\
+                     fr"(?P<{INT_CONST}>({NUMBER_REGEX}))"
+
+
+    KEYWORD_LST = ["class", "constructor", "function", "method", "field", "static", "var", "int", "char", "boolean",
+                   "void", "true", "false", "null", "this", "let", "do", "if", "else", "while", "return"]
+    SYMBOL_LST = ["{", "}", "(", ")", "[", "]", ".", ",", ";", "+", "-", "*", "/", "&", "|", "<", ">", "=",
+                  "~", "^", "#"]
+
+    #create dictionary that map keywords and symbols
+    # ELEMENT_DIC = {key : KEYWORD for key in KEYWORD_LST}
+    # for symbol in SYMBOL_LST:
+    #     ELEMENT_DIC[symbol] = SYMBOL
+
+
+
     def __init__(self, input_stream: typing.TextIO) -> None:
         """Opens the input stream and gets ready to tokenize it.
 
@@ -100,8 +143,14 @@ class JackTokenizer:
         """
         # Your code goes here!
         # A good place to start is to read all the lines of the input:
-        # input_lines = input_stream.read().splitlines()
-        pass
+        self._input_lines = input_stream.read().splitlines()
+        self._cur_token = ""
+        self._cur_type = None
+        self._token_gen = self.get_next_token()
+        self._in_comment = False
+
+    def get_token(self):
+        return self._cur_token
 
     def has_more_tokens(self) -> bool:
         """Do we have more tokens in the input?
@@ -109,16 +158,28 @@ class JackTokenizer:
         Returns:
             bool: True if there are more tokens, False otherwise.
         """
-        # Your code goes here!
-        pass
+        return self._cur_token is not None
+
+    def get_next_token(self) -> typing.Tuple[str, str]:
+        for line in self._input_lines:
+            matches = re.finditer(JackTokenizer.COMBINED_REGEX, line)
+            for match in matches:
+                yield (match.lastgroup, match.group(match.lastgroup))
+        yield None, None
 
     def advance(self) -> None:
         """Gets the next token from the input and makes it the current token. 
         This method should be called if has_more_tokens() is true. 
         Initially there is no current token.
         """
-        # Your code goes here!
-        pass
+        self._cur_type, self._cur_token = next(self._token_gen)
+        if self._cur_type == JackTokenizer.API_COMMENT_START:
+            self._in_comment = True
+        else:
+            self._in_comment = False
+        while self._in_comment or self._cur_type == JackTokenizer.COMMENT:
+            self.advance()
+
 
     def token_type(self) -> str:
         """
@@ -126,8 +187,9 @@ class JackTokenizer:
             str: the type of the current token, can be
             "KEYWORD", "SYMBOL", "IDENTIFIER", "INT_CONST", "STRING_CONST"
         """
-        # Your code goes here!
-        pass
+        return self._cur_type
+
+
 
     def keyword(self) -> str:
         """
@@ -138,8 +200,7 @@ class JackTokenizer:
             "BOOLEAN", "CHAR", "VOID", "VAR", "STATIC", "FIELD", "LET", "DO", 
             "IF", "ELSE", "WHILE", "RETURN", "TRUE", "FALSE", "NULL", "THIS"
         """
-        # Your code goes here!
-        pass
+        return self._cur_token
 
     def symbol(self) -> str:
         """
@@ -150,8 +211,8 @@ class JackTokenizer:
             symbol: '{' | '}' | '(' | ')' | '[' | ']' | '.' | ',' | ';' | '+' | 
               '-' | '*' | '/' | '&' | '|' | '<' | '>' | '=' | '~' | '^' | '#'
         """
-        # Your code goes here!
-        pass
+        return self._cur_token
+
 
     def identifier(self) -> str:
         """
@@ -163,8 +224,8 @@ class JackTokenizer:
                   starting with a digit. You can assume keywords cannot be
                   identifiers, so 'self' cannot be an identifier, etc'.
         """
-        # Your code goes here!
-        pass
+        return self._cur_token
+
 
     def int_val(self) -> int:
         """
@@ -174,8 +235,7 @@ class JackTokenizer:
             Recall that integerConstant was defined in the grammar like so:
             integerConstant: A decimal number in the range 0-32767.
         """
-        # Your code goes here!
-        pass
+        return int(self._cur_token)
 
     def string_val(self) -> str:
         """
@@ -186,5 +246,4 @@ class JackTokenizer:
             StringConstant: '"' A sequence of Unicode characters not including 
                       double quote or newline '"'
         """
-        # Your code goes here!
-        pass
+        return self._cur_token
