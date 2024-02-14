@@ -94,19 +94,19 @@ class JackTokenizer:
     """
 
 
-    KEYWORD = "KEYWORD"
+    KEYWORD = "keyword"
     END_COMMENT = "END_COMMENT"
     START_COMMENT = "START_COMMENT"
     COMMENT = "COMMENT"
-    SYMBOL = "SYMBOL"
-    IDENTIFIER = "IDENTIFIER"
-    INT_CONST = "INT_CONST"
-    STRING_CONST = "STRING_CONST"
+    SYMBOL = "symbol"
+    IDENTIFIER = "identifier"
+    INT_CONST = "integerConstant"
+    STRING_CONST = "stringConstant"
     #regex
     STRING_REGEX = '"([^"]*)"'
     IDENTIFIER_REGEX = "[a-zA-Z_][\w_]*"
-    NUMBER_REGEX = 'r"\d+"'
-    SYMBOL_REGEX = '[\[|\]|\{|\}|\(|\)|\.\,;\+\-*&|<>=~\^#]'
+    NUMBER_REGEX = '\d+'
+    SYMBOL_REGEX = '[\/[|\]|\{|\}|\(|\)|\.\,;\+\-*&|<>=~\^#]'
     KEYWORD_REGEX = 'class|constructor|function|method|field|static|var|int|char|boolean|void|true|false|' \
                     'null|this|let|do|if|else|while|return'
     ONELINE_COMMENT_REGEX = r"\/\/.*$"
@@ -119,8 +119,9 @@ class JackTokenizer:
                      fr"(?P<{KEYWORD}>({KEYWORD_REGEX}))|"\
                      fr"(?P<{SYMBOL}>({SYMBOL_REGEX}))|" \
                      fr"(?P<{STRING_CONST}>({STRING_REGEX}))|"\
-                     fr"(?P<{IDENTIFIER}>({IDENTIFIER_REGEX}))|"\
+                     fr"(?P<{IDENTIFIER}>({IDENTIFIER_REGEX}))|" \
                      fr"(?P<{INT_CONST}>({NUMBER_REGEX}))"
+
 
 
     KEYWORD_LST = ["class", "constructor", "function", "method", "field", "static", "var", "int", "char", "boolean",
@@ -164,7 +165,7 @@ class JackTokenizer:
         for line in self._input_lines:
             matches = re.finditer(JackTokenizer.COMBINED_REGEX, line)
             for match in matches:
-                yield (match.lastgroup, match.group(match.lastgroup))
+                yield match.lastgroup, match.group(match.lastgroup)
         yield None, None
 
     def advance(self) -> None:
@@ -173,12 +174,16 @@ class JackTokenizer:
         Initially there is no current token.
         """
         self._cur_type, self._cur_token = next(self._token_gen)
-        if self._cur_type == JackTokenizer.API_COMMENT_START:
+        if self._cur_type == JackTokenizer.START_COMMENT:
             self._in_comment = True
-        else:
+        elif self._cur_type == JackTokenizer.END_COMMENT:
             self._in_comment = False
+            self.advance()
         while self._in_comment or self._cur_type == JackTokenizer.COMMENT:
             self.advance()
+        #remove " from strings
+        if self._cur_type == JackTokenizer.STRING_CONST:
+            self._cur_token = self._cur_token[1:-1]
 
 
     def token_type(self) -> str:
