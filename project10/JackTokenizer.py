@@ -8,7 +8,14 @@ Unported [License](https://creativecommons.org/licenses/by-nc-sa/3.0/).
 import typing
 import re
 
-
+KEYWORD = "keyword"
+END_COMMENT = "END_COMMENT"
+START_COMMENT = "START_COMMENT"
+COMMENT = "COMMENT"
+SYMBOL = "symbol"
+IDENTIFIER = "identifier"
+INT_CONST = "integerConstant"
+STRING_CONST = "stringConstant"
 class JackTokenizer:
     """Removes all comments from the input stream and breaks it
     into Jack language tokens, as specified by the Jack grammar.
@@ -94,20 +101,15 @@ class JackTokenizer:
     """
 
 
-    KEYWORD = "keyword"
-    END_COMMENT = "END_COMMENT"
-    START_COMMENT = "START_COMMENT"
-    COMMENT = "COMMENT"
-    SYMBOL = "symbol"
-    IDENTIFIER = "identifier"
-    INT_CONST = "integerConstant"
-    STRING_CONST = "stringConstant"
+
     #regex
     STRING_REGEX = '"([^"]*)"'
     IDENTIFIER_REGEX = "[a-zA-Z_][\w_]*"
     NUMBER_REGEX = '\d+'
     SYMBOL_REGEX = '[\/[|\]|\{|\}|\(|\)|\.\,;\+\-*&|<>=~\^#]'
-    KEYWORD_REGEX = 'class|constructor|function|method|field|static|var|int|char|boolean|void|true|false|' \
+    KEYWORD_REGEX = 'class|constructor|function|method|' \
+                    'field|static|var|int|char|' \
+                    'boolean|void|true|false|' \
                     'null|this|let|do|if|else|while|return'
     ONELINE_COMMENT_REGEX = r"\/\/.*$"
     API_COMMENT_START = r"\/\*((?:(?!\*\/).)*)"
@@ -116,23 +118,17 @@ class JackTokenizer:
     COMBINED_REGEX = fr"(?P<{COMMENT}>({ONELINE_COMMENT_REGEX}))|"\
                      fr"(?P<{START_COMMENT}>({API_COMMENT_START}))|"\
                      fr"(?P<{END_COMMENT}>({MULTILINE_COMMENT_END}))|" \
-                     fr"(?P<{KEYWORD}>({KEYWORD_REGEX}))|"\
+                     fr"(?P<{KEYWORD}>\b({KEYWORD_REGEX})\b)|"\
                      fr"(?P<{SYMBOL}>({SYMBOL_REGEX}))|" \
                      fr"(?P<{STRING_CONST}>({STRING_REGEX}))|"\
                      fr"(?P<{IDENTIFIER}>({IDENTIFIER_REGEX}))|" \
                      fr"(?P<{INT_CONST}>({NUMBER_REGEX}))"
 
-
-
-    KEYWORD_LST = ["class", "constructor", "function", "method", "field", "static", "var", "int", "char", "boolean",
-                   "void", "true", "false", "null", "this", "let", "do", "if", "else", "while", "return"]
-    SYMBOL_LST = ["{", "}", "(", ")", "[", "]", ".", ",", ";", "+", "-", "*", "/", "&", "|", "<", ">", "=",
-                  "~", "^", "#"]
-
-    #create dictionary that map keywords and symbols
-    # ELEMENT_DIC = {key : KEYWORD for key in KEYWORD_LST}
-    # for symbol in SYMBOL_LST:
-    #     ELEMENT_DIC[symbol] = SYMBOL
+    #
+    # KEYWORD_LST = ["class", "constructor", "function", "method", "field", "static", "var", "int", "char", "boolean",
+    #                "void", "true", "false", "null", "this", "let", "do", "if", "else", "while", "return"]
+    # SYMBOL_LST = ["{", "}", "(", ")", "[", "]", ".", ",", ";", "+", "-", "*", "/", "&", "|", "<", ">", "=",
+    #               "~", "^", "#"]
 
 
 
@@ -147,8 +143,12 @@ class JackTokenizer:
         self._input_lines = input_stream.read().splitlines()
         self._cur_token = ""
         self._cur_type = None
-        self._token_gen = self.get_next_token()
+        self._next_token = ""
+        self._next_type = None
+        self._token_gen = self._token_generator()
         self._in_comment = False
+        self.advance()
+        self.advance()# TODO check if cur_token should contain value from the beginning
 
     def get_token(self):
         return self._cur_token
@@ -159,30 +159,38 @@ class JackTokenizer:
         Returns:
             bool: True if there are more tokens, False otherwise.
         """
-        return self._cur_token is not None
+        return self._next_token is not None
 
-    def get_next_token(self) -> typing.Tuple[str, str]:
+    def _token_generator(self) -> typing.Tuple[str, str]:
+        """
+
+        Returns:
+
+        """
         for line in self._input_lines:
             matches = re.finditer(JackTokenizer.COMBINED_REGEX, line)
             for match in matches:
                 yield match.lastgroup, match.group(match.lastgroup)
-        yield None, None
+        while True:
+            yield None, None
 
     def advance(self) -> None:
         """Gets the next token from the input and makes it the current token. 
         This method should be called if has_more_tokens() is true. 
         Initially there is no current token.
         """
-        self._cur_type, self._cur_token = next(self._token_gen)
-        if self._cur_type == JackTokenizer.START_COMMENT:
+        self._cur_type, self._cur_token = self._next_type, self._next_token
+        self._next_type, self._next_token = next(self._token_gen)
+        #comment handle
+        if self._cur_type == START_COMMENT:
             self._in_comment = True
-        elif self._cur_type == JackTokenizer.END_COMMENT:
+        elif self._cur_type == END_COMMENT:
             self._in_comment = False
             self.advance()
-        while self._in_comment or self._cur_type == JackTokenizer.COMMENT:
+        while self._in_comment or self._cur_type == COMMENT:
             self.advance()
         #remove " from strings
-        if self._cur_type == JackTokenizer.STRING_CONST:
+        if self._cur_type == STRING_CONST:
             self._cur_token = self._cur_token[1:-1]
 
 

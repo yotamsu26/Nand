@@ -7,6 +7,8 @@ Unported [License](https://creativecommons.org/licenses/by-nc-sa/3.0/).
 """
 import typing
 import JackTokenizer
+from JackTokenizer import KEYWORD, IDENTIFIER, SYMBOL, INT_CONST, STRING_CONST
+
 
 
 class CompilationEngine:
@@ -18,6 +20,7 @@ class CompilationEngine:
 
     OP = ["+", "-", "*", "/", "&", "|", "<", ">", "="]
     KEYWORD_CONSTANT = ["true", "false", "null", "this"]
+    OP_DEC = {"<" : "&lt;", ">" : "&gt;", "&" : "&amp;"}
 
     def __init__(self, input_stream: JackTokenizer, output_stream) -> None:
         """
@@ -35,10 +38,10 @@ class CompilationEngine:
 
     def _compile_type(self) -> None:
         """Compiles a type."""
-        if self._tokenizer.tokenType() == "KEYWORD" and self._tokenizer.keyWord() in ["int", "char", "boolean"]:
-            self._process(self._tokenizer.keyWord(), self._tokenizer.tokenType())
+        if self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() in ["int", "char", "boolean"]:
+            self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
         else:
-            self._process(self._tokenizer.identifier(), self._tokenizer.tokenType())
+            self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
 
     def _compile_subroutine_body(self) -> None:
         self._output_stream.write(self._prefix + "<subroutineBody>\n")
@@ -46,11 +49,11 @@ class CompilationEngine:
         # indentation
         self._prefix += "  "
 
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
-        while self._tokenizer.tokenType() == "KEYWORD" and self._tokenizer.keyWord() == "var":
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() == "var":
             self.compile_var_dec()
         self.compile_statements()
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # indentation
         self._prefix = self._prefix[:-2]
@@ -60,13 +63,13 @@ class CompilationEngine:
     def _compile_subroutine_call(self, symbol: str) -> None:
         """Compiles a subroutine call."""
         if symbol == ".":
-            self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
-            self._process(self._tokenizer.identifier(), self._tokenizer.tokenType())
-            self.compile_expression_list()
-        else:
-            self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
-            self.compile_expression_list()
-            self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+            while self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == ".":
+                self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+                self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
+
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        self.compile_expression_list()
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
         
 
     def compile_class(self) -> None:
@@ -76,19 +79,19 @@ class CompilationEngine:
         # indentation
         self._prefix += "  "
 
-        self._process(self._tokenizer.keyWord(), self._tokenizer.tokenType())
-        self._process(self._tokenizer.identifier(), self._tokenizer.tokenType())
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
+        self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # class variables declarations
-        while self._tokenizer.tokenType() == "KEYWORD" and self._tokenizer.keyWord() in ["static", "field"]:
+        while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() in ["static", "field"]:
             self.compile_class_var_dec()
 
         # subroutines declarations
-        while self._tokenizer.tokenType() == "KEYWORD" and self._tokenizer.keyWord() in ["constructor", "function", "method"]:
+        while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() in ["constructor", "function", "method"]:
             self.compile_subroutine()
 
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # indentation
         self._prefix = self._prefix[:-2]
@@ -102,13 +105,13 @@ class CompilationEngine:
         # indentation
         self._prefix += "  "
 
-        self._process(self._tokenizer.keyWord(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
         self._compile_type()
-        self._process(self._tokenizer.identifier(), self._tokenizer.tokenType())
-        while self._tokenizer.tokenType() == "SYMBOL" and self._tokenizer.symbol() == ",":
-            self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
-            self._process(self._tokenizer.identifier(), self._tokenizer.tokenType())
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
+        while self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == ",":
+            self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+            self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # indentation
         self._prefix = self._prefix[:-2]
@@ -127,17 +130,17 @@ class CompilationEngine:
         # indentation
         self._prefix += "  "
 
-        self._process(self._tokenizer.keyWord(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
         
-        if self._tokenizer.tokenType() == "KEYWORD" and self._tokenizer.keyWord() == "void":
-            self._process(self._tokenizer.keyWord(), self._tokenizer.tokenType())
+        if self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() == "void":
+            self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
         else:
             self._compile_type()
 
-        self._process(self._tokenizer.identifier(), self._tokenizer.tokenType())
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
         self.compile_parameter_list()
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
         self._compile_subroutine_body()
 
         # indentation
@@ -156,12 +159,14 @@ class CompilationEngine:
         # indentation
         self._prefix += "  "
 
-        if self._compile_type() == True:
-            self._process(self._tokenizer.identifier(), self._tokenizer.tokenType())
-            while self._tokenizer.tokenType() == "SYMBOL" and self._tokenizer.symbol() == ",":
-                self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        # if self._compile_type() == True:
+        if self._tokenizer.token_type() != SYMBOL: #TODO arad add this
+            self._compile_type()
+            self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
+            while self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == ",":
+                self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
                 self._compile_type()
-                self._process(self._tokenizer.identifier(), self._tokenizer.tokenType())
+                self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
 
         # indentation
         self._prefix = self._prefix[:-2]
@@ -176,13 +181,13 @@ class CompilationEngine:
         # indentation
         self._prefix += "  "
 
-        self._process(self._tokenizer.keyWord(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
         self._compile_type()
-        self._process(self._tokenizer.identifier(), self._tokenizer.tokenType())
-        while self._tokenizer.tokenType() == "SYMBOL" and self._tokenizer.symbol() == ",": 
-            self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
-            self._process(self._tokenizer.identifier(), self._tokenizer.tokenType())
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
+        while self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == ",":
+            self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+            self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # indentation
         self._prefix = self._prefix[:-2]
@@ -198,33 +203,47 @@ class CompilationEngine:
         # indentation
         self._prefix += "  "
 
-        while self._tokenizer.tokenType() == "KEYWORD" and self._tokenizer.keyWord() in ["let", "if", "while", "do", "return"]:
-            if self._tokenizer.keyWord() == "let":
+        while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() in ["let", "if", "while", "do", "return"]:
+            if self._tokenizer.keyword() == "let":
                 self.compile_let()
-            elif self._tokenizer.keyWord() == "if":
+            elif self._tokenizer.keyword() == "if":
                 self.compile_if()
-            elif self._tokenizer.keyWord() == "while":
+            elif self._tokenizer.keyword() == "while":
                 self.compile_while()
-            elif self._tokenizer.keyWord() == "do":
+            elif self._tokenizer.keyword() == "do":
                 self.compile_do()
-            elif self._tokenizer.keyWord() == "return":
+            elif self._tokenizer.keyword() == "return":
                 self.compile_return()
+
+        self._prefix = self._prefix[:-2]
+        self._output_stream.write(self._prefix + "</statements>\n")
 
     def compile_do(self) -> None:
         """Compiles a do statement."""
-        self._output_stream.write("<doStatement>\n")
+        self._output_stream.write(self._prefix + "<doStatement>\n")
 
         # indentation
         self._prefix += "  "
 
-        self._process(self._tokenizer.keyWord(), self._tokenizer.tokenType())
-        self.compile_subroutine()
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.keyword(), self._tokenizer.token_type()) #write do
+        self._process(self._tokenizer.identifier(), self._tokenizer.token_type()) #write class routine
+
+        while self._tokenizer.token_type() != SYMBOL or self._tokenizer.symbol() != "(":
+            if self._tokenizer.token_type == IDENTIFIER:
+                self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
+            else:
+                self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        self.compile_expression_list()
+        # self.compile_subroutine()
+
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # indentation
         self._prefix = self._prefix[:-2]
 
-        self._output_stream.write("</doStatement>\n")
+        self._output_stream.write(self._prefix + "</doStatement>\n")
 
     def compile_let(self) -> None:
         """Compiles a let statement."""
@@ -234,16 +253,16 @@ class CompilationEngine:
         # indentation
         self._prefix += "  "
 
-        self._process(self._tokenizer.keyWord(), self._tokenizer.tokenType())
-        self._process(self._tokenizer.identifier(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
+        self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
         # TODO another problem with process API
-        if self._tokenizer.tokenType() == "SYMBOL" and self._tokenizer.symbol() == "[":
-            self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        if self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == "[":
+            self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
             self.compile_expression()
-            self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+            self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
         self.compile_expression()
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # indentation
         self._prefix = self._prefix[:-2]
@@ -258,13 +277,13 @@ class CompilationEngine:
         # indentation
         self._prefix += "  "
 
-        self._process(self._tokenizer.keyWord(), self._tokenizer.tokenType())
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
         self.compile_expression()
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
         self.compile_statements()
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # indentation
         self._prefix = self._prefix[:-2]
@@ -279,10 +298,10 @@ class CompilationEngine:
         # indentation
         self._prefix += "  "
 
-        self._process(self._tokenizer.keyWord(), self._tokenizer.tokenType())
-        if self._tokenizer.tokenType() != "SYMBOL" or self._tokenizer.symbol() != ";":
+        self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
+        if self._tokenizer.token_type() != SYMBOL or self._tokenizer.symbol() != ";":
             self.compile_expression()
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # indentation
         self._prefix = self._prefix[:-2]
@@ -296,19 +315,19 @@ class CompilationEngine:
         # indentation
         self._prefix += "  "
 
-        self._process(self._tokenizer.keyWord(), self._tokenizer.tokenType())
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
         self.compile_expression()
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
         self.compile_statements()
-        self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
-        if self._tokenizer.tokenType() == "KEYWORD" and self._tokenizer.keyWord() == "else":
-            self._process(self._tokenizer.keyWord(), self._tokenizer.tokenType())
-            self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        if self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() == "else":
+            self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
+            self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
             self.compile_statements()
-            self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+            self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # indentation
         self._prefix = self._prefix[:-2]
@@ -324,8 +343,11 @@ class CompilationEngine:
         self._prefix += "  "
 
         self.compile_term()
-        while self._tokenizer.tokenType() == "SYMBOL" and self._tokenizer.symbol() in CompilationEngine.OP:
-            self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        while self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() in CompilationEngine.OP:
+            val = self._tokenizer.symbol()
+            if val in CompilationEngine.OP_DEC.keys():
+                val = CompilationEngine.OP_DEC[val]
+            self._process(val, self._tokenizer.token_type())
             self.compile_term()
         
         # indentation
@@ -348,29 +370,32 @@ class CompilationEngine:
         # indentation
         self._prefix += "  "
 
-        if self._tokenizer.tokenType() == "INT_CONST":
-            self._process(self._tokenizer.intVal(), self._tokenizer.tokenType())
-        elif self._tokenizer.tokenType() == "STRING_CONST":
-            self._process(self._tokenizer.stringVal(), self._tokenizer.tokenType())
-        elif self._tokenizer.tokenType() == "KEYWORD" and \
-            self._tokenizer.keyWord() in CompilationEngine.KEYWORD_CONSTANT:
-            self._process(self._tokenizer.keyWord(), self._tokenizer.tokenType())
-        elif self._tokenizer.tokenType() == "SYMBOL" and self._tokenizer.symbol() in ["-", "~"]:
-            self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        if self._tokenizer.token_type() == INT_CONST:
+            self._process(self._tokenizer.int_val(), self._tokenizer.token_type())
+        elif self._tokenizer.token_type() == STRING_CONST:
+            self._process(self._tokenizer.string_val(), self._tokenizer.token_type())
+        elif self._tokenizer.token_type() == KEYWORD and \
+            self._tokenizer.keyword() in CompilationEngine.KEYWORD_CONSTANT:
+            self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
+        elif self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() in ["-", "~"]:
+            self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
             self.compile_term()
             # TODO : check about parenthesis
-        elif self._tokenizer.tokenType() == "SYMBOL" and self._tokenizer.symbol() == "(":
-            self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+        elif self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == "(":
+            self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
             self.compile_expression()
-            self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
-        elif self._tokenizer.tokenType() == "IDENTIFIER":
-            self._process(self._tokenizer.identifier(), self._tokenizer.tokenType())
-            if self._tokenizer.tokenType() == "SYMBOL" and self._tokenizer.symbol() == "[":
-                self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+            self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        elif self._tokenizer.token_type() == IDENTIFIER:
+            self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
+            if self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == "[":
+                self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
                 self.compile_expression()
-                self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
-            elif self._tokenizer.tokenType() == "SYMBOL" and self._tokenizer.symbol() in ["(", "."]:
+                self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+            elif self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() in ["(", "."]:
                 self._compile_subroutine_call(self._tokenizer.symbol())
+
+        self._prefix = self._prefix[:-2]#TODO arad add this
+        self._output_stream.write(self._prefix + "</term>\n") #TODO arad add this
 
     def compile_expression_list(self) -> None:
         """Compiles a (possibly empty) comma-separated list of expressions."""
@@ -379,11 +404,11 @@ class CompilationEngine:
         # indentation
         self._prefix += "  "
 
-        if self._tokenizer.tokenType() != "SYMBOL" or self._tokenizer.symbol() == "(":
+        if not (self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == ")"):
             # TODO : check if this is the only possible symbol
             self.compile_expression()
-            while self._tokenizer.tokenType() == "SYMBOL" and self._tokenizer.symbol() == ",":
-                self._process(self._tokenizer.symbol(), self._tokenizer.tokenType())
+            while self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == ",":
+                self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
                 self.compile_expression()
 
         # indentation
@@ -402,7 +427,7 @@ class CompilationEngine:
         """Writes the token to the output stream."""
         self._output_stream.write(self._prefix + 
                                   "<" + tokenType + "> " + 
-                                  token + 
+                                  str(token) +
                                   " </" + tokenType + ">\n")
         
     # TODO : see if nessecary to call self._tokenizer.keyWord() and self._tokenizer.tokenType() in the each process
