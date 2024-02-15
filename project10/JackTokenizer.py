@@ -99,9 +99,6 @@ class JackTokenizer:
     
     Note that ^, # correspond to shiftleft and shiftright, respectively.
     """
-
-
-
     #regex
     STRING_REGEX = '"([^"]*)"'
     IDENTIFIER_REGEX = "[a-zA-Z_][\w_]*"
@@ -124,13 +121,6 @@ class JackTokenizer:
                      fr"(?P<{IDENTIFIER}>({IDENTIFIER_REGEX}))|" \
                      fr"(?P<{INT_CONST}>({NUMBER_REGEX}))"
 
-    #
-    # KEYWORD_LST = ["class", "constructor", "function", "method", "field", "static", "var", "int", "char", "boolean",
-    #                "void", "true", "false", "null", "this", "let", "do", "if", "else", "while", "return"]
-    # SYMBOL_LST = ["{", "}", "(", ")", "[", "]", ".", ",", ";", "+", "-", "*", "/", "&", "|", "<", ">", "=",
-    #               "~", "^", "#"]
-
-
 
     def __init__(self, input_stream: typing.TextIO) -> None:
         """Opens the input stream and gets ready to tokenize it.
@@ -145,13 +135,10 @@ class JackTokenizer:
         self._cur_type = None
         self._next_token = ""
         self._next_type = None
-        self._token_gen = self._token_generator()
+        self._token_gen = self._token_generator() #create the generator
         self._in_comment = False
         self.advance()
-        self.advance()# TODO check if cur_token should contain value from the beginning
-
-    def get_token(self):
-        return self._cur_token
+        self.advance()
 
     def has_more_tokens(self) -> bool:
         """Do we have more tokens in the input?
@@ -163,9 +150,8 @@ class JackTokenizer:
 
     def _token_generator(self) -> typing.Tuple[str, str]:
         """
-
-        Returns:
-
+        this is generator that each time yield the tuple(token type, token value)
+        Returns: the current token
         """
         for line in self._input_lines:
             matches = re.finditer(JackTokenizer.COMBINED_REGEX, line)
