@@ -8,6 +8,8 @@ Unported [License](https://creativecommons.org/licenses/by-nc-sa/3.0/).
 import typing
 import re
 
+# constants
+
 KEYWORD = "keyword"
 END_COMMENT = "END_COMMENT"
 START_COMMENT = "START_COMMENT"
@@ -16,6 +18,7 @@ SYMBOL = "symbol"
 IDENTIFIER = "identifier"
 INT_CONST = "integerConstant"
 STRING_CONST = "stringConstant"
+
 class JackTokenizer:
     """Removes all comments from the input stream and breaks it
     into Jack language tokens, as specified by the Jack grammar.

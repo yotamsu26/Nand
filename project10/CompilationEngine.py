@@ -41,47 +41,63 @@ class CompilationEngine:
         if self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() in \
                 ["int", "char", "boolean"]:
             self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
+        # the type is a class name which is identifier
         else:
             self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
 
     def _compile_subroutine_body(self) -> None:
+        """Compiles a subroutine body."""
+        # xml tag
         self._output_stream.write(self._prefix + "<subroutineBody>\n")
 
         # indentation
         self._prefix += "  "
 
+        # process '{' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        # var declarations
         while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() == "var":
             self.compile_var_dec()
+        # statements    
         self.compile_statements()
+        # process '}' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # indentation
         self._prefix = self._prefix[:-2]
 
+        # xml tag
         self._output_stream.write(self._prefix + "</subroutineBody>\n")
 
     def _compile_subroutine_call(self, symbol: str) -> None:
         """Compiles a subroutine call."""
+        # process subroutine name
         if symbol == ".":
             while self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == ".":
                 self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
                 self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
 
+        # process '(' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        # process expression list
         self.compile_expression_list()
+        # process ')' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
         
 
     def compile_class(self) -> None:
         """Compiles a complete class."""
+        # xml tag
         self._output_stream.write("<class>\n")
 
         # indentation
         self._prefix += "  "
 
+        # process class keyword
         self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
+        # process class name which is identifier
         self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
+        # process '{' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # class variables declarations
@@ -94,31 +110,40 @@ class CompilationEngine:
                 ["constructor", "function", "method"]:
             self.compile_subroutine()
 
+        # process '}' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # indentation
         self._prefix = self._prefix[:-2]
 
+        # xml tag
         self._output_stream.write("</class>\n")
 
     def compile_class_var_dec(self) -> None:
         """Compiles a static declaration or a field declaration."""
+        # xml tag
         self._output_stream.write(self._prefix + "<classVarDec>\n")
 
         # indentation
         self._prefix += "  "
 
+        # process static or field keyword
         self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
+        # process type
         self._compile_type()
+        # process variable name
         self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
+        # process ',' and variable names if exists
         while self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == ",":
             self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
             self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
+        # process ';' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # indentation
         self._prefix = self._prefix[:-2]
 
+        # xml tag
         self._output_stream.write(self._prefix + "</classVarDec>\n")
         
 
@@ -128,22 +153,30 @@ class CompilationEngine:
         You can assume that classes with constructors have at least one field,
         you will understand why this is necessary in project 11.
         """
+        # xml tag
         self._output_stream.write(self._prefix + "<subroutineDec>\n")
 
         # indentation
         self._prefix += "  "
 
+        # process constructor, function or method keyword
         self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
         
+        # process return type
         if self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() == "void":
             self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
         else:
             self._compile_type()
 
+        # process subroutine name
         self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
+        # process '(' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        # process parameter list
         self.compile_parameter_list()
+        # process ')' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        # process subroutine body
         self._compile_subroutine_body()
 
         # indentation
@@ -157,6 +190,7 @@ class CompilationEngine:
         """Compiles a (possibly empty) parameter list, not including the 
         enclosing "()".
         """
+        # xml tag
         self._output_stream.write(self._prefix + "<parameterList>\n")
 
         # indentation
@@ -174,38 +208,46 @@ class CompilationEngine:
         # indentation
         self._prefix = self._prefix[:-2]
 
+        # xml tag
         self._output_stream.write(self._prefix + "</parameterList>\n")
 
 
     def compile_var_dec(self) -> None:
         """Compiles a var declaration."""
+        # xml tag
         self._output_stream.write(self._prefix + "<varDec>\n")
 
         # indentation
         self._prefix += "  "
-
+        # process var keyword
         self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
+        # process type
         self._compile_type()
+        # process variable name
         self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
+        # process ',' and variable names if exists
         while self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == ",":
             self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
             self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
+        # process ';' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # indentation
         self._prefix = self._prefix[:-2]
-
+        # xml tag
         self._output_stream.write(self._prefix + "</varDec>\n")
 
     def compile_statements(self) -> None:
         """Compiles a sequence of statements, not including the enclosing 
         "{}".
         """
+        # xml tag
         self._output_stream.write(self._prefix + "<statements>\n")
 
         # indentation
         self._prefix += "  "
 
+        # process statements
         while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() in \
                 ["let", "if", "while", "do", "return"]:
             if self._tokenizer.keyword() == "let":
@@ -219,29 +261,36 @@ class CompilationEngine:
             elif self._tokenizer.keyword() == "return":
                 self.compile_return()
 
+        # indentation
         self._prefix = self._prefix[:-2]
+        # xml tag
         self._output_stream.write(self._prefix + "</statements>\n")
 
     def compile_do(self) -> None:
         """Compiles a do statement."""
+        # xml tag
         self._output_stream.write(self._prefix + "<doStatement>\n")
 
         # indentation
         self._prefix += "  "
-
-        self._process(self._tokenizer.keyword(), self._tokenizer.token_type()) #write do
-        self._process(self._tokenizer.identifier(), self._tokenizer.token_type()) #write class routine
-
+        # process do keyword
+        self._process(self._tokenizer.keyword(), self._tokenizer.token_type()) 
+        # process subroutine name or class name or variable name
+        self._process(self._tokenizer.identifier(), self._tokenizer.token_type()) 
+        # process subroutine call according to the next token
         while self._tokenizer.token_type() != SYMBOL or self._tokenizer.symbol() != "(":
             if self._tokenizer.token_type == IDENTIFIER:
                 self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
             else:
                 self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        # process '(' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        # process expression list
         self.compile_expression_list()
-        # self.compile_subroutine()
 
+        # process ')' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        # process ';' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # indentation
@@ -256,77 +305,98 @@ class CompilationEngine:
 
         # indentation
         self._prefix += "  "
-
+        # process let keyword
         self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
+        # process variable name
         self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
-        # TODO another problem with process API
+        # process '[' and expression if exists
         if self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == "[":
             self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
             self.compile_expression()
             self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        # process '=' char  
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        # process expression
         self.compile_expression()
+        # process ';' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # indentation
         self._prefix = self._prefix[:-2]
-
+        # xml tag
         self._output_stream.write(self._prefix + "</letStatement>\n")
 
 
     def compile_while(self) -> None:
         """Compiles a while statement."""
+        # xml tag
         self._output_stream.write(self._prefix + "<whileStatement>\n")
 
         # indentation
         self._prefix += "  "
-
+        # process while keyword
         self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
+        # process '(' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        # process expression
         self.compile_expression()
+        # process ')' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        # process '{' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        # process statements
         self.compile_statements()
+        # process '}' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # indentation
         self._prefix = self._prefix[:-2]
-
+        # xml tag
         self._output_stream.write(self._prefix + "</whileStatement>\n")
 
 
     def compile_return(self) -> None:
         """Compiles a return statement."""
+        # xml tag
         self._output_stream.write(self._prefix + "<returnStatement>\n")
 
         # indentation
         self._prefix += "  "
-
+        # process return keyword
         self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
+        # process expression if exists
         if self._tokenizer.token_type() != SYMBOL or self._tokenizer.symbol() != ";":
             self.compile_expression()
+        # process ';' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # indentation
         self._prefix = self._prefix[:-2]
-
+        # xml tag
         self._output_stream.write(self._prefix + "</returnStatement>\n")
 
     def compile_if(self) -> None:
         """Compiles a if statement, possibly with a trailing else clause."""
+        # xml tag
         self._output_stream.write(self._prefix + "<ifStatement>\n")
 
         # indentation
         self._prefix += "  "
-
+        # process if keyword
         self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
+        # process '(' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        # process expression
         self.compile_expression()
+        # process ')' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        # process '{' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        # process statements
         self.compile_statements()
+        # process '}' char
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
-
+        # process else clause if exists
         if self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() == "else":
             self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
             self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
@@ -335,18 +405,21 @@ class CompilationEngine:
 
         # indentation
         self._prefix = self._prefix[:-2]
-
+        # xml tag
         self._output_stream.write(self._prefix + "</ifStatement>\n")
         
 
     def compile_expression(self) -> None:
         """Compiles an expression."""
+        # xml tag
         self._output_stream.write(self._prefix + "<expression>\n")
 
         # indentation
         self._prefix += "  "
 
+        # process term
         self.compile_term()
+        # process op and term if exists
         while self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() in CompilationEngine.OP:
             val = self._tokenizer.symbol()
             if val in CompilationEngine.OP_DEC.keys():
@@ -356,7 +429,7 @@ class CompilationEngine:
         
         # indentation
         self._prefix = self._prefix[:-2]
-
+        # xml tag
         self._output_stream.write(self._prefix + "</expression>\n")
 
     def compile_term(self) -> None:
@@ -369,26 +442,31 @@ class CompilationEngine:
         to distinguish between the three possibilities. Any other token is not
         part of this term and should not be advanced over.
         """
+        # xml tag
         self._output_stream.write(self._prefix + "<term>\n")
 
         # indentation
         self._prefix += "  "
-
+        # process term if INT_CONST
         if self._tokenizer.token_type() == INT_CONST:
             self._process(self._tokenizer.int_val(), self._tokenizer.token_type())
+        # process term if STRING_CONST
         elif self._tokenizer.token_type() == STRING_CONST:
             self._process(self._tokenizer.string_val(), self._tokenizer.token_type())
+        # process term if KEYWORD is true, false, null or this
         elif self._tokenizer.token_type() == KEYWORD and \
             self._tokenizer.keyword() in CompilationEngine.KEYWORD_CONSTANT:
             self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
+        # process term if SYMBOL is in ['-', '~', '#', '^']
         elif self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() in ["-", "~", "#", "^"]:
             self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
             self.compile_term()
-            # TODO : check about parenthesis
+        # process expression if SYMBOL is '(' 
         elif self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == "(":
             self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
             self.compile_expression()
             self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
+        # process term if IDENTIFIER
         elif self._tokenizer.token_type() == IDENTIFIER:
             self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
             if self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == "[":
@@ -397,19 +475,22 @@ class CompilationEngine:
                 self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
             elif self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() in ["(", "."]:
                 self._compile_subroutine_call(self._tokenizer.symbol())
-
+        
+        # indentation
         self._prefix = self._prefix[:-2]
+        # xml tag
         self._output_stream.write(self._prefix + "</term>\n")
 
     def compile_expression_list(self) -> None:
         """Compiles a (possibly empty) comma-separated list of expressions."""
+        # xml tag
         self._output_stream.write(self._prefix + "<expressionList>\n")
 
         # indentation
         self._prefix += "  "
 
+        # process expression if exists
         if not (self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == ")"):
-            # TODO : check if this is the only possible symbol
             self.compile_expression()
             while self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == ",":
                 self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
@@ -417,7 +498,7 @@ class CompilationEngine:
 
         # indentation
         self._prefix = self._prefix[:-2]
-
+        # xml tag
         self._output_stream.write(self._prefix + "</expressionList>\n")
 
     def _process(self, token: str, wrapper: str) -> None:
@@ -434,4 +515,3 @@ class CompilationEngine:
                                   str(token) +
                                   " </" + tokenType + ">\n")
         
-    # TODO : see if nessecary to call self._tokenizer.keyWord() and self._tokenizer.tokenType() in the each process
