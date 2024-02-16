@@ -38,7 +38,8 @@ class CompilationEngine:
 
     def _compile_type(self) -> None:
         """Compiles a type."""
-        if self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() in ["int", "char", "boolean"]:
+        if self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() in \
+                ["int", "char", "boolean"]:
             self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
         else:
             self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
@@ -84,11 +85,13 @@ class CompilationEngine:
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
 
         # class variables declarations
-        while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() in ["static", "field"]:
+        while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() in \
+                ["static", "field"]:
             self.compile_class_var_dec()
 
         # subroutines declarations
-        while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() in ["constructor", "function", "method"]:
+        while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() in \
+                ["constructor", "function", "method"]:
             self.compile_subroutine()
 
         self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
@@ -160,7 +163,7 @@ class CompilationEngine:
         self._prefix += "  "
 
         # if self._compile_type() == True:
-        if self._tokenizer.token_type() != SYMBOL: #TODO arad add this
+        if self._tokenizer.token_type() != SYMBOL:
             self._compile_type()
             self._process(self._tokenizer.identifier(), self._tokenizer.token_type())
             while self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == ",":
@@ -203,7 +206,8 @@ class CompilationEngine:
         # indentation
         self._prefix += "  "
 
-        while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() in ["let", "if", "while", "do", "return"]:
+        while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() in \
+                ["let", "if", "while", "do", "return"]:
             if self._tokenizer.keyword() == "let":
                 self.compile_let()
             elif self._tokenizer.keyword() == "if":
@@ -394,8 +398,8 @@ class CompilationEngine:
             elif self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() in ["(", "."]:
                 self._compile_subroutine_call(self._tokenizer.symbol())
 
-        self._prefix = self._prefix[:-2]#TODO arad add this
-        self._output_stream.write(self._prefix + "</term>\n") #TODO arad add this
+        self._prefix = self._prefix[:-2]
+        self._output_stream.write(self._prefix + "</term>\n")
 
     def compile_expression_list(self) -> None:
         """Compiles a (possibly empty) comma-separated list of expressions."""
