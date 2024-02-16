@@ -377,7 +377,7 @@ class CompilationEngine:
         elif self._tokenizer.token_type() == KEYWORD and \
             self._tokenizer.keyword() in CompilationEngine.KEYWORD_CONSTANT:
             self._process(self._tokenizer.keyword(), self._tokenizer.token_type())
-        elif self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() in ["-", "~"]:
+        elif self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() in ["-", "~", "#", "^"]:
             self._process(self._tokenizer.symbol(), self._tokenizer.token_type())
             self.compile_term()
             # TODO : check about parenthesis
