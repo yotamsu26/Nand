@@ -103,6 +103,9 @@ class CompilationEngine:
         # advance after the subroutine name after saving it
         sub_name = self._tokenizer.identifier()
         self._tokenizer.advance()
+        # add this to the symbol table
+        if subroutine_type == "method":
+            self._symbol_table.define(name="this", type=self._class_name, kind=SymbolTable.ARG_KIND)
         #advance after the (
         self._tokenizer.advance()
         #compile the parameter list
@@ -120,7 +123,6 @@ class CompilationEngine:
             self._writer.write_pop(segment="pointer", index=0)
         # handle method
         if subroutine_type == "method":
-            self._symbol_table.define(name="this", type=self._class_name, kind=SymbolTable.ARG_KIND)
             self._writer.write_push(segment="argument", index=0)
             self._writer.write_pop(segment="pointer", index=0)
         #advance after the {
