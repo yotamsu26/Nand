@@ -182,6 +182,14 @@ class JackTokenizer:
         if self._cur_type == STRING_CONST:
             self._cur_token = self._cur_token[1:-1]
 
+    def get_token_and_advance(self):
+        val, token_type = self._cur_token, self._cur_type
+        self.advance()
+        return val, token_type
+
+    def look_ahead(self):
+        return self._next_type, self._next_token
+
 
     def token_type(self) -> str:
         """
