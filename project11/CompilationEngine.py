@@ -217,6 +217,8 @@ class CompilationEngine:
         self._tokenizer.advance()
         # compile the expression
         self._compile_subroutine_call()
+        # advance after the ;
+        self._tokenizer.advance()
         # write the pop command
         self._writer.write_pop(segment="temp", index=0)
 
