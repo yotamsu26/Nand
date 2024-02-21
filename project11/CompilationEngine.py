@@ -104,7 +104,8 @@ class CompilationEngine:
         
         #advance after the return type
         self._tokenizer.advance()
-        # advance after the subroutine name
+        # advance after the subroutine name after saving it
+        sub_name = self._tokenizer.identifier()
         self._tokenizer.advance()
         #advance after the (
         self._tokenizer.advance()
@@ -112,6 +113,15 @@ class CompilationEngine:
         self.compile_parameter_list()
         #advance after the )
         self._tokenizer.advance()
+        # write the function command
+        self._writer.write_function(name=f"{self._class_name}.{sub_name}",
+                                     n_locals=self._symbol_table.var_count(kind=SymbolTable.ARG_KIND))
+        # handle constructor
+        if subroutine_type == "constructor":
+            # write the memory allocation command
+            self._writer.write_push(segment="constant", index=self._symbol_table.var_count(kind=SymbolTable.FIELD_KIND))
+            self._writer.write_call(name="Memory.alloc", n_args=1)
+            self._writer.write_pop(segment="pointer", index=0)
         #advance after the {
         self._tokenizer.advance()
         #compile the var dec
