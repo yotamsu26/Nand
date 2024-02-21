@@ -109,6 +109,11 @@ class SymbolTable:
                 return func(dic[name])
         return None
 
+    def _get_kind_table(self, kind : str) -> typing.Dict[str, VarData]:
+
+       if kind in [SymbolTable.STATIC_KIND, SymbolTable.FIELD_KIND]:
+           return self._scopes_array[0]
+       return self._scopes_array[1]
 
     class VarData:
         def __init__(self, var_type: str, kind: str, index: int):
@@ -125,11 +130,6 @@ class SymbolTable:
         def get_index(self):
             return self._index
 
-    def _get_kind_table(self, kind : str) -> typing.Dict[str, VarData]:
-
-       if kind in [SymbolTable.STATIC_KIND, SymbolTable.FIELD_KIND]:
-           return self._scopes_array[0]
-       return self._scopes_array[1]
 
 
 #test

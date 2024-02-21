@@ -36,32 +36,55 @@ class CompilationEngine:
         self._output = output_stream
         self._symbol_table = SymbolTable()
         self._writer = VMWriter(output_stream=output_stream)
+        self._generator_label_counter = 0
+        self._class_name = ''
 
 
     def compile_class(self) -> None:
         """Compiles a complete class."""
-        # Your code goes here!
-        pass
+        #advance after the class
+        self._tokenizer.advance()
+        #advance after the class name after saving it
+        self._class_name = self._tokenizer.identifier()
+        self._tokenizer.advance()
+        #advance after the {
+        self._tokenizer.advance()
+        #compile the class var dec
+        while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() in \
+                ["static", "field"]:
+            self.compile_class_var_dec()
+        #compile the subroutine
+        while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() in \
+                ["constructor", "function", "method"]:
+            self.compile_subroutine()
+
+        #advance after the }
+        self._tokenizer.advance()
 
     def compile_class_var_dec(self) -> None:
         """Compiles a static declaration or a field declaration."""
-        kind = self._tokenizer.get_token_and_advance()
+        # save the kind
+        kind = self._tokenizer.keyword()
+        # advance after the static or field
         self._tokenizer.advance()
-        var_type = self._tokenizer.identifier() #this can be keyword as well
+        # save the type
+        var_type = self._compile_type 
+        # advance after the type
         self._tokenizer.advance()
+        # save the name 
         var_name = self._tokenizer.identifier()
-        #add to symbol_table
+        #advance after the name
+        self._tokenizer.advance()
+        # add to symbol_table
         self._symbol_table.define(name=var_name, type=var_type, kind=kind)
-        #handle declaration in the form of static int HORZ_CAR, VERT_CAR, VERT_TRUCK, RED;
-        while self._tokenizer.look_ahead() == ",":
-            self._tokenizer.advance()
+        # handle declaration in the form of static int HORZ_CAR, VERT_CAR, VERT_TRUCK, RED;
+        while self._tokenizer.token_type == SYMBOL and self._tokenizer.symbol() == ",":
             self._tokenizer.advance()
             var_name = self._tokenizer.identifier()
+            self._tokenizer.advance()
             self._symbol_table.define(name=var_name, type=var_type, kind=kind)
-
-
-
-
+        #advance after the ;
+        self._tokenizer.advance()
 
     def compile_subroutine(self) -> None:
         """
@@ -71,55 +94,223 @@ class CompilationEngine:
         """
         #initialize the symbol table
         self._symbol_table.start_subroutine()
+        #save the subroutine type
+        subroutine_type = self._tokenizer.keyword()
+        #advance after the constructor, function, or method
+        self._tokenizer.advance()
+        # add this to the symbol table if it is a method
+        if  self._tokenizer.keyword() == "method":
+            self._symbol_table.define(name="this", type=self._class_name, kind=SymbolTable.ARG_KIND)
+        
+        #advance after the return type
+        self._tokenizer.advance()
+        # advance after the subroutine name
+        self._tokenizer.advance()
+        #advance after the (
+        self._tokenizer.advance()
+        #compile the parameter list
+        self.compile_parameter_list()
+        #advance after the )
+        self._tokenizer.advance()
+        #advance after the {
+        self._tokenizer.advance()
+        #compile the var dec
+        while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() == "var":
+            self.compile_var_dec()
+        #compile the statements
+        self.compile_statements()
+        #advance after the }
+        self._tokenizer.advance()
 
 
     def compile_parameter_list(self) -> None:
         """Compiles a (possibly empty) parameter list, not including the 
         enclosing "()".
         """
-        # Your code goes here!
-        pass
+        # compile the type
+        curType = self._compile_type()
+        # advance after the type
+        self._tokenizer.advance()
+        # compile the var name
+        varName = self._tokenizer.identifier()
+        # advance after the var name
+        self._tokenizer.advance()
+        # add to symbol table
+        self._symbol_table.define(name=varName, type=curType, kind=SymbolTable.ARG_KIND)
+        # handle the case of multiple parameters
+        while self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == ",":
+            # advance after the ,
+            self._tokenizer.advance()
+            # compile the type
+            curType = self._compile_type()
+            # advance after the type
+            self._tokenizer.advance()
+            # compile the var name
+            varName = self._tokenizer.identifier()
+            # advance after the var name
+            self._tokenizer.advance()
+            # add to symbol table
+            self._symbol_table.define(name=varName, type=curType, kind=SymbolTable.ARG_KIND)
 
     def compile_var_dec(self) -> None:
         """Compiles a var declaration."""
-        #assume tokenizer pass when the current value is var
+        # advance after the var
         self._tokenizer.advance()
-        var_type = self._tokenizer.keyword()
+        # compile the type
+        var_type = self._compile_type()
+        # advance after the type
         self._tokenizer.advance()
+        # compile the var name
         var_name = self._tokenizer.identifier()
+        # advance after the var name
+        self._tokenizer.advance()
+        # add to symbol table
         self._symbol_table.define(name=var_name, type=var_type, kind=SymbolTable.VAR_KIND)
+        # handle the case of multiple variables
+        while self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == ",":
+            # advance after the ,
+            self._tokenizer.advance()
+            # compile the var name
+            var_name = self._tokenizer.identifier()
+            # advance after the var name
+            self._tokenizer.advance()
+            # add to symbol table
+            self._symbol_table.define(name=var_name, type=var_type, kind=SymbolTable.VAR_KIND)
+        # advance after the ;
+        self._tokenizer.advance()
 
     def compile_statements(self) -> None:
         """Compiles a sequence of statements, not including the enclosing 
         "{}".
         """
-        # Your code goes here!
-        pass
+
+        # process statements
+        while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() in \
+                ["let", "if", "while", "do", "return"]:
+            if self._tokenizer.keyword() == "let":
+                self.compile_let()
+            elif self._tokenizer.keyword() == "if":
+                self.compile_if()
+            elif self._tokenizer.keyword() == "while":
+                self.compile_while()
+            elif self._tokenizer.keyword() == "do":
+                self.compile_do()
+            elif self._tokenizer.keyword() == "return":
+                self.compile_return()
 
     def compile_do(self) -> None:
         """Compiles a do statement."""
-        # Your code goes here!
-        pass
+        # advance after the do
+        self._tokenizer.advance()
+        # compile the expression
+        self._compile_subroutine_call()
+        # write the pop command
+        self._writer.write_pop(segment="temp", index=0)
 
     def compile_let(self) -> None:
         """Compiles a let statement."""
-        # Your code goes here!
-        pass
+        # advance after the let
+        self._tokenizer.advance()
+        # save the var name
+        varName = self._tokenizer.identifier()
+        # advance after the var name
+        self._tokenizer.advance()
+
+        # if it is an array
+        if (self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == "["):
+            # TODO: handle array
+            pass
+
+        # compile the expression
+        self.compile_expression()
+        # write the pop command
+        self._writer.write_pop(segment=self._symbol_table.kind_of(varName),
+                               index=self._symbol_table.index_of(varName))
 
     def compile_while(self) -> None:
         """Compiles a while statement."""
-        # Your code goes here!
-        pass
+        # generate labels
+        label1 = f"L.{self._generator_label_counter}"
+        label2 = f"L.{self._generator_label_counter + 1}"
+        self._generator_label_counter += 2
+
+        # write the label1
+        self._writer.write_label(label1)
+        # advance after the while
+        self._tokenizer.advance()
+        # advance after the (
+        self._tokenizer.advance()
+        # compile the expression
+        self.compile_expression()
+        # advance after the )
+        self._tokenizer.advance()
+        # write not command
+        self._writer.write_arithmetic(command="not")
+        # write if-goto label2
+        self._writer.write_if(label2)
+        # advance after the {
+        self._tokenizer.advance()
+        # compile the statements
+        self.compile_statements()
+        # advance after the }
+        self._tokenizer.advance()
+        # write goto label1
+        self._writer.write_goto(label1)
+        # write the label2
+        self._writer.write_label(label2)
 
     def compile_return(self) -> None:
         """Compiles a return statement."""
-        # Your code goes here!
-        pass
+        # advance after the return
+        self._tokenizer.advance()
+        # evaluate the expression and put it on the top of the stack
+        if self._tokenizer.token_type() != SYMBOL or self._tokenizer.symbol() != ";":
+            self.compile_expression()
+        # write the return command 
+        self._writer.write_return()
 
     def compile_if(self) -> None:
         """Compiles a if statement, possibly with a trailing else clause."""
-        # Your code goes here!
-        pass
+        # generate labels
+        label1 = f"L.{self._generator_label_counter}"
+        label2 = f"L.{self._generator_label_counter + 1}"
+        self._generator_label_counter += 2
+
+        # advance after the if
+        self._tokenizer.advance()
+        # advance after the (
+        self._tokenizer.advance()
+        # compile the expression
+        self.compile_expression()
+        # advance after the )
+        self._tokenizer.advance()
+        # write not command
+        self._writer.write_arithmetic(command="not")
+        # write if-goto label1
+        self._writer.write_if(label1)
+        # advance after the {
+        self._tokenizer.advance()
+        # compile the statements
+        self.compile_statements()
+        # advance after the }
+        self._tokenizer.advance()
+        # write goto label2
+        self._writer.write_goto(label2)
+        # write the label1
+        self._writer.write_label(label1)
+        # if there is an else
+        if (self._tokenizer.token_type() == KEYWORD and self._tokenizer.key_word() == "else"):
+            # advance after the else
+            self._tokenizer.advance()
+            # advance after the {
+            self._tokenizer.advance()
+            # compile the statements
+            self.compile_statements()
+            # advance after the }
+            self._tokenizer.advance()
+        # write the label2
+        self._writer.write_label(label2)
+
 
     def compile_expression(self) -> None:
         """Compiles an expression."""
@@ -164,6 +355,55 @@ class CompilationEngine:
             self._handle_identifier_in_term()
 
 
+    def compile_expression_list(self) -> int:
+        """Compiles a (possibly empty) comma-separated list of expressions."""
+        # Your code goes here!
+        counter = 0
+        while self._tokenizer.look_ahead()[1] != ')':
+            counter += 1
+            self.compile_expression() #assume advance
+
+        return counter
+    
+    def _compile_subroutine_call(self) -> None:
+        # advance after the subroutine name or the class name after saving it
+        curName = self._tokenizer.identifier()
+        self._tokenizer.advance()
+        
+        # compile the expression list if symbol is (
+        if self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == "(":
+            #advance after the (
+            self._tokenizer.advance()
+            # compile the expression list and save the number of arguments
+            nArgs = self.compile_expression_list()
+            # write the call command
+            self._writer.write_call(name=f"{self._class_name}.{curName}", n_args=nArgs)
+            #advance after the )
+            self._tokenizer.advance()
+        
+        # compile the expression list if symbol is .
+        elif self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == ".":
+            #advance after the .
+            self._tokenizer.advance()
+            #advance after the subroutine name after saving it
+            curName += f".{self._tokenizer.identifier()}"
+            self._tokenizer.advance()
+            #advance after the (
+            self._tokenizer.advance()
+            # compile the expression list and save the number of arguments
+            nArgs = self.compile_expression_list()
+            # write the call command
+            self._writer.write_call(name=curName, n_args=nArgs)
+            #advance after the )
+            self._tokenizer.advance()
+    
+    def _compile_type(self) -> None:
+        """Compiles a type."""
+        cur_type = self._tokenizer.token_type()
+        if cur_type == KEYWORD:
+            return self._tokenizer.keyword()
+        else:
+            return self._tokenizer.identifier()
 
     def _handle_identifier_in_term(self):
         cur_identifier = self._tokenizer.identifier()
@@ -209,14 +449,5 @@ class CompilationEngine:
         self.compile_term()
         self._writer.write_arithmetic(cur_symbol)
 
-    def compile_expression_list(self) -> int:
-        """Compiles a (possibly empty) comma-separated list of expressions."""
-        # Your code goes here!
-        counter = 0
-        while self._tokenizer.look_ahead()[1] != ')':
-            counter += 1
-            self.compile_expression() #assume advance
-
-        return counter
 
 
