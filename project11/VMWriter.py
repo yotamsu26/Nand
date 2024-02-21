@@ -9,6 +9,7 @@ import typing
 
 
 class VMWriter:
+    CONSTANT_SEG = "constant"
     """
     Writes VM commands into a file. Encapsulates the VM command syntax.
     """
@@ -55,7 +56,7 @@ class VMWriter:
             command (str): the command to write, can be "ADD", "SUB", "NEG", 
             "EQ", "GT", "LT", "AND", "OR", "NOT", "SHIFTLEFT", "SHIFTRIGHT".
         """
-        command = command.lower()
+        # command = command.lower()
         self._output_stream.write(f"{command}\n")
 
     def write_label(self, label: str) -> None:
