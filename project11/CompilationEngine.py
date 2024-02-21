@@ -98,10 +98,6 @@ class CompilationEngine:
         subroutine_type = self._tokenizer.keyword()
         #advance after the constructor, function, or method
         self._tokenizer.advance()
-        # add this to the symbol table if it is a method
-        if  self._tokenizer.keyword() == "method":
-            self._symbol_table.define(name="this", type=self._class_name, kind=SymbolTable.ARG_KIND)
-        
         #advance after the return type
         self._tokenizer.advance()
         # advance after the subroutine name after saving it
@@ -121,6 +117,11 @@ class CompilationEngine:
             # write the memory allocation command
             self._writer.write_push(segment="constant", index=self._symbol_table.var_count(kind=SymbolTable.FIELD_KIND))
             self._writer.write_call(name="Memory.alloc", n_args=1)
+            self._writer.write_pop(segment="pointer", index=0)
+        # handle method
+        if subroutine_type == "method":
+            self._symbol_table.define(name="this", type=self._class_name, kind=SymbolTable.ARG_KIND)
+            self._writer.write_push(segment="argument", index=0)
             self._writer.write_pop(segment="pointer", index=0)
         #advance after the {
         self._tokenizer.advance()
@@ -221,21 +222,10 @@ class CompilationEngine:
         """Compiles a let statement."""
         # advance after the let
         self._tokenizer.advance()
-        # save the var name
-        varName = self._tokenizer.identifier()
-        # advance after the var name
-        self._tokenizer.advance()
-
-        # if it is an array
-        if (self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == "["):
-            # TODO: handle array
-            pass
-
         # compile the expression
         self.compile_expression()
-        # write the pop command
-        self._writer.write_pop(segment=self._symbol_table.kind_of(varName),
-                               index=self._symbol_table.index_of(varName))
+        # advance after the ;
+        self._tokenizer.advance()
 
     def compile_while(self) -> None:
         """Compiles a while statement."""
