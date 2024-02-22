@@ -498,6 +498,11 @@ class CompilationEngine:
             self._tokenizer.advance()
             func_name += f".{self._tokenizer.identifier()}"
             self._tokenizer.advance()
+        elif self._tokenizer.symbol() == "(": #this is a method
+            self._writer.write_push(segment="pointer", index=0)
+            func_name = f"{self._class_name}.{func_name}"
+            is_method = True
+
         if self._tokenizer.symbol() == "(":
             # call to function
             n_args = self.compile_expression_list()
