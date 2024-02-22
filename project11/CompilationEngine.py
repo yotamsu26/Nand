@@ -394,6 +394,7 @@ class CompilationEngine:
             self._tokenizer.advance()
             self.compile_expression()
             self._tokenizer.advance() #pass )
+            return
 
         # process const int
         if cur_type == INT_CONST:
@@ -518,6 +519,7 @@ class CompilationEngine:
         #self._writer.write_pop(segment="temp", index=0)
         self._writer.write_pop(segment="pointer", index=1)
         self._writer.write_push(segment="that", index=0)
+        #self._tokenizer.advance()
 
 
 
