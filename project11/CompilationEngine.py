@@ -90,7 +90,7 @@ class CompilationEngine:
         # add to symbol_table
         self._symbol_table.define(name=var_name, type=var_type, kind=kind)
         # handle declaration in the form of static int HORZ_CAR, VERT_CAR, VERT_TRUCK, RED;
-        while self._tokenizer.token_type == SYMBOL and self._tokenizer.symbol() == ",":
+        while self._tokenizer.symbol() == ",":
             self._tokenizer.advance()
             var_name = self._tokenizer.identifier()
             self._tokenizer.advance()
