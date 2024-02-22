@@ -24,7 +24,7 @@ class CompilationEngine:
                SymbolTable.FIELD_KIND: "this"
                }
     # this dictionary maps between keywords and their segment and index
-    KEYWORD_MAP = {"true": ("constant", 1),
+    KEYWORD_MAP = {"true": ("constant", 0),
                    "false": ("constant", 0),
                    "null": ("constant", 0),
                    "this": ("pointer", 0)
@@ -73,6 +73,10 @@ class CompilationEngine:
         """Compiles a static declaration or a field declaration."""
         # save the kind
         kind = self._tokenizer.keyword()
+        # as this class var we can assume its kind is either static or field
+        if kind == "static":
+            kind = SymbolTable.STATIC_KIND
+        else: kind = SymbolTable.FIELD_KIND
         # advance after the static or field
         self._tokenizer.advance()
         # save the type
@@ -120,9 +124,15 @@ class CompilationEngine:
         self.compile_parameter_list()
         #advance after the )
         self._tokenizer.advance()
+        #advance after the {
+        self._tokenizer.advance()
+        #compile the var dec
+        while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() == "var":
+            self.compile_var_dec()
         # write the function command
+        s = self._symbol_table.var_count(kind=SymbolTable.VAR_KIND)
         self._writer.write_function(name=f"{self._class_name}.{sub_name}",
-                                     n_locals=self._symbol_table.var_count(kind=SymbolTable.ARG_KIND))
+                                     n_locals=s)
         # handle constructor
         if subroutine_type == "constructor":
             # write the memory allocation command
@@ -133,11 +143,7 @@ class CompilationEngine:
         if subroutine_type == "method":
             self._writer.write_push(segment="argument", index=0)
             self._writer.write_pop(segment="pointer", index=0)
-        #advance after the {
-        self._tokenizer.advance()
-        #compile the var dec
-        while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() == "var":
-            self.compile_var_dec()
+
         #compile the statements
         self.compile_statements()
         #advance after the }
@@ -358,10 +364,11 @@ class CompilationEngine:
         to distinguish between the three possibilities. Any other token is not
         part of this term and should not be advanced over.
         """
-
         if self._tokenizer.keyword() in CompilationEngine.KEYWORD_MAP.keys():
             seg, ind = CompilationEngine.KEYWORD_MAP[self._tokenizer.keyword()]
             self._writer.write_push(segment=seg, index=ind)
+            if self._tokenizer.keyword() == "true":
+                self._writer.write_arithmetic("not")
             self._tokenizer.advance()
 
         cur_type = self._tokenizer.token_type()
@@ -451,11 +458,15 @@ class CompilationEngine:
 
     def _handle_identifier_in_term(self):
         cur_identifier = self._tokenizer.identifier()
+        is_method = False
+
+
         class_name = cur_identifier
         if self._symbol_table.kind_of(cur_identifier):  # return None if this is not exist var
             self._writer.write_push(segment=CompilationEngine.SEG_MAP[self._symbol_table.kind_of(cur_identifier)],
                                     index=self._symbol_table.index_of(cur_identifier))
             class_name = self._symbol_table.type_of(cur_identifier)
+            is_method = True
         # this look do not advance the tokenizer
         func_name = class_name
         self._tokenizer.advance()
@@ -466,6 +477,8 @@ class CompilationEngine:
         if self._tokenizer.symbol() == "(":
             # call to function
             n_args = self.compile_expression_list()
+            if  is_method:
+                n_args += 1
             self._writer.write_call(name=func_name, n_args=n_args)
             self._tokenizer.advance()  # get )
 
