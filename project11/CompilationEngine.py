@@ -244,12 +244,30 @@ class CompilationEngine:
         self._tokenizer.advance()
         # compile the expression
         var_name = self._tokenizer.identifier()
-        self._tokenizer.advance() # advance =
-        self._tokenizer.advance()
-        self.compile_expression()
-        seg = CompilationEngine.SEG_MAP[self._symbol_table.kind_of(var_name)]
-        index = self._symbol_table.index_of(var_name)
-        self._writer.write_pop(segment=seg, index=index) #assign the value into the variable
+        if self._tokenizer.look_ahead()[1] == "[":
+            #lets assume we handle a[exp_1] = exp_2
+            self._writer.write_push(segment=CompilationEngine.SEG_MAP[self._symbol_table.kind_of(var_name)],
+                                    index=self._symbol_table.index_of(var_name))
+            self._tokenizer.advance() #got [
+            self._tokenizer.advance() #got exp_1
+            self.compile_expression()
+            self._tokenizer.advance() #got =
+            self._writer.write_arithmetic(command="add") # put a + exp_1 at the top of the stack
+            self._tokenizer.advance() # got exp_2
+            self.compile_expression()
+            self._writer.write_pop(segment="temp", index=0)
+            self._writer.write_pop(segment="pointer", index=1)
+            self._writer.write_push(segment="temp", index=0)
+            self._writer.write_pop(segment="that", index=0)
+
+        else:
+            self._tokenizer.advance()  # advance =
+            self._tokenizer.advance()
+            self.compile_expression()
+            seg = CompilationEngine.SEG_MAP[self._symbol_table.kind_of(var_name)]
+            index = self._symbol_table.index_of(var_name)
+            self._writer.write_pop(segment=seg, index=index)  # assign the value into the variable
+
         # advance after the ;
         self._tokenizer.advance()
 
@@ -386,6 +404,7 @@ class CompilationEngine:
         elif cur_type == STRING_CONST:
             self._compile_string()
 
+
         #handle unary operator
         elif cur_type == SYMBOL and self._tokenizer.symbol() in CompilationEngine.UNARY_OP_DEC.keys():
             self._handle_unary_op()
@@ -442,11 +461,13 @@ class CompilationEngine:
     def _compile_string(self) -> None:
         #push string lem into the stack
         self._writer.write_push(segment=VMWriter.CONSTANT_SEG, index=len(self._tokenizer.string_val()))
-        self._writer.write_call(name="String.new",n_args=len(self._tokenizer.string_val()))
+        self._writer.write_call(name="String.new",n_args=1)
         for char in self._tokenizer.string_val():
             #push the car ascii value
             self._writer.write_push(segment=VMWriter.CONSTANT_SEG, index=ord(char))
-            self._writer.write_call("String.appendChar", 1) #this function return the string to the top of the stack
+            self._writer.write_call("String.appendChar", 2) #this function return the string to the top of the stack
+        self._tokenizer.advance()
+
 
     def _compile_type(self) -> str:
         """Compiles a type."""
@@ -467,6 +488,8 @@ class CompilationEngine:
                                     index=self._symbol_table.index_of(cur_identifier))
             class_name = self._symbol_table.type_of(cur_identifier)
             is_method = True
+        if self._tokenizer.look_ahead()[1] == "[":
+            self._handle_array_in_term()
         # this look do not advance the tokenizer
         func_name = class_name
         self._tokenizer.advance()
@@ -482,20 +505,20 @@ class CompilationEngine:
             self._writer.write_call(name=func_name, n_args=n_args)
             self._tokenizer.advance()  # get )
 
-        elif self._tokenizer.look_ahead()[1] == "[":
-            self._handle_array_in_term()
+
         #advance?
 
 
     def _handle_array_in_term(self):
+        # assume the command is a[exp_1]
         self._tokenizer.advance() # got [
         self._tokenizer.advance()
-        self.compile_expression()
+        self.compile_expression() # compile exp_1
         self._writer.write_arithmetic(CompilationEngine.BINARY_OP_DEC["+"])
+        #self._writer.write_pop(segment="temp", index=0)
         self._writer.write_pop(segment="pointer", index=1)
-        self._writer.write_push(segment="temp", index=0)
-        self._writer.write_pop(segment="that", index=0)
-        #advance?
+        self._writer.write_push(segment="that", index=0)
+
 
 
 
