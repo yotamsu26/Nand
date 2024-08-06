@@ -47,7 +47,6 @@ class CompilationEngine:
         self._generator_label_counter = 0
         self._class_name = ''
 
-
     def compile_class(self) -> None:
         """Compiles a complete class."""
         #advance after the class
@@ -130,9 +129,9 @@ class CompilationEngine:
         while self._tokenizer.token_type() == KEYWORD and self._tokenizer.keyword() == "var":
             self.compile_var_dec()
         # write the function command
-        s = self._symbol_table.var_count(kind=SymbolTable.VAR_KIND)
+        local_vars = self._symbol_table.var_count(kind=SymbolTable.VAR_KIND)
         self._writer.write_function(name=f"{self._class_name}.{sub_name}",
-                                     n_locals=s)
+                                     n_locals=local_vars)
         # handle constructor
         if subroutine_type == "constructor":
             # write the memory allocation command
@@ -148,7 +147,6 @@ class CompilationEngine:
         self.compile_statements()
         #advance after the }
         self._tokenizer.advance()
-
 
     def compile_parameter_list(self) -> None:
         """Compiles a (possibly empty) parameter list, not including the 
@@ -242,27 +240,38 @@ class CompilationEngine:
         """Compiles a let statement."""
         # advance after the let
         self._tokenizer.advance()
-        # compile the expression
+        # save the var name
         var_name = self._tokenizer.identifier()
         if self._tokenizer.look_ahead()[1] == "[":
             #lets assume we handle a[exp_1] = exp_2
             self._writer.write_push(segment=CompilationEngine.SEG_MAP[self._symbol_table.kind_of(var_name)],
                                     index=self._symbol_table.index_of(var_name))
-            self._tokenizer.advance() #got [
-            self._tokenizer.advance() #got exp_1
+            # advance after the var name
+            self._tokenizer.advance() 
+            # advance after the [
+            self._tokenizer.advance() 
+            # compile the expression
             self.compile_expression()
-            self._tokenizer.advance() #got =
-            self._writer.write_arithmetic(command="add") # put a + exp_1 at the top of the stack
-            self._tokenizer.advance() # got exp_2
+            # advance after the ]
+            self._tokenizer.advance() 
+            # put a + exp_1 at the top of the stack
+            self._writer.write_arithmetic(command="add") 
+            # advance after the =
+            self._tokenizer.advance()
+            # compile the expression
             self.compile_expression()
+            # vm commands for a[exp_1] = exp_2
             self._writer.write_pop(segment="temp", index=0)
             self._writer.write_pop(segment="pointer", index=1)
             self._writer.write_push(segment="temp", index=0)
             self._writer.write_pop(segment="that", index=0)
 
         else:
-            self._tokenizer.advance()  # advance =
+            # advance after the var name
+            self._tokenizer.advance()  
+            # advance after the =
             self._tokenizer.advance()
+            # compile the expression
             self.compile_expression()
             seg = CompilationEngine.SEG_MAP[self._symbol_table.kind_of(var_name)]
             index = self._symbol_table.index_of(var_name)
@@ -358,7 +367,6 @@ class CompilationEngine:
         # write the label2
         self._writer.write_label(label2)
 
-
     def compile_expression(self) -> None:
         """Compiles an expression."""
         self.compile_term() # assume advance the tokenizer
@@ -370,7 +378,6 @@ class CompilationEngine:
             self.compile_term() # assume advance the tokenizer
             # write the operator
             self._writer.write_arithmetic(command=CompilationEngine.BINARY_OP_DEC[symbol])
-
 
     def compile_term(self) -> None:
         """Compiles a term. 
@@ -414,7 +421,6 @@ class CompilationEngine:
         elif cur_type == IDENTIFIER:
             self._handle_identifier_in_term()
 
-
     def compile_expression_list(self) -> int:
         """Compiles a (possibly empty) comma-separated list of expressions."""
         # Your code goes here!
@@ -428,37 +434,6 @@ class CompilationEngine:
 
         return counter
     
-    def _compile_subroutine_call(self) -> None:
-        # advance after the subroutine name or the class name after saving it
-        curName = self._tokenizer.identifier()
-        self._tokenizer.advance()
-        
-        # compile the expression list if symbol is (
-        if self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == "(":
-            #advance after the (
-            self._tokenizer.advance()
-            # compile the expression list and save the number of arguments
-            nArgs = self.compile_expression_list()
-            # write the call command
-            self._writer.write_call(name=f"{self._class_name}.{curName}", n_args=nArgs)
-            #advance after the )
-            self._tokenizer.advance()
-        
-        # compile the expression list if symbol is .
-        elif self._tokenizer.token_type() == SYMBOL and self._tokenizer.symbol() == ".":
-            #advance after the .
-            self._tokenizer.advance()
-            #advance after the subroutine name after saving it
-            curName += f".{self._tokenizer.identifier()}"
-            self._tokenizer.advance()
-            #advance after the (
-            self._tokenizer.advance()
-            # compile the expression list and save the number of arguments
-            nArgs = self.compile_expression_list()
-            # write the call command
-            self._writer.write_call(name=curName, n_args=nArgs)
-            #advance after the )
-            self._tokenizer.advance()
     def _compile_string(self) -> None:
         #push string lem into the stack
         self._writer.write_push(segment=VMWriter.CONSTANT_SEG, index=len(self._tokenizer.string_val()))
@@ -511,23 +486,14 @@ class CompilationEngine:
             self._writer.write_call(name=func_name, n_args=n_args)
             self._tokenizer.advance()  # get )
 
-
-        #advance?
-
-
     def _handle_array_in_term(self):
         # assume the command is a[exp_1]
         self._tokenizer.advance() # got [
         self._tokenizer.advance()
         self.compile_expression() # compile exp_1
         self._writer.write_arithmetic(CompilationEngine.BINARY_OP_DEC["+"])
-        #self._writer.write_pop(segment="temp", index=0)
         self._writer.write_pop(segment="pointer", index=1)
         self._writer.write_push(segment="that", index=0)
-        #self._tokenizer.advance()
-
-
-
 
     def _handle_unary_op(self):
         cur_symbol = self._tokenizer.symbol()
